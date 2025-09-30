@@ -4,24 +4,21 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateAttendeesTable extends Migration
-{
-    public function up()
+return new class extends Migration {
+    public function up(): void
     {
         Schema::create('attendees', function (Blueprint $table) {
-            $table->bigIncrements('attendance_id');
-
-            $table->string('username')->nullable();
+            $table->id('attendee_id'); // PK
+            $table->string('username');
             $table->string('email')->unique();
             $table->string('password');
-            $table->unsignedInteger('age')->nullable();
-
+            $table->integer('age');
             $table->timestamps();
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('attendees');
     }
-}
+};
