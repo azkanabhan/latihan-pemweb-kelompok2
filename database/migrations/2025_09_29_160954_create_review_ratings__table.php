@@ -9,15 +9,15 @@ return new class extends Migration {
     {
         Schema::create('reviews_ratings', function (Blueprint $table) {
             $table->id('review_id'); // PK
-            $table->unsignedBigInteger('user_id');  // FK ke attendees
+            $table->unsignedBigInteger('attendee_id');  // FK ke attendees
             $table->unsignedBigInteger('event_id'); // FK ke events
 
             $table->text('body');
-            $table->integer('rating')->checkBetween(1, 5);
+            $table->unsignedTinyInteger('rating'); // enforce via validation or DB check per driver
             $table->timestamps();
 
             // FK
-            $table->foreign('user_id')
+            $table->foreign('attendee_id')
                 ->references('attendee_id')
                 ->on('attendees')
                 ->onDelete('cascade');

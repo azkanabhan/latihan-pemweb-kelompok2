@@ -10,11 +10,8 @@ return new class extends Migration {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id('ticket_id'); // PK
             $table->unsignedBigInteger('event_id');     // FK ke events
-            $table->unsignedBigInteger('attendee_id');  // FK ke attendees
-
-            $table->string('qr_code')->nullable();
+            $table->string('name');
             $table->decimal('price', 10, 2);
-            $table->enum('status', ['active', 'used', 'cancelled']);
             $table->timestamps();
 
             // Foreign keys
@@ -23,10 +20,6 @@ return new class extends Migration {
                 ->on('events')
                 ->onDelete('cascade');
 
-            $table->foreign('attendee_id')
-                ->references('attendee_id')
-                ->on('attendees')
-                ->onDelete('cascade');
         });
     }
 

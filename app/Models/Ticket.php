@@ -9,26 +9,19 @@ class Ticket extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'ticket_id';
+
     protected $fillable = [
-        'fk_event_id',
-        'fk_attendee_id',
-        'qr_code',
+        'event_id',
+        'name',
         'price',
-        'status'
+        
     ];
 
     public function event()
     {
-        return $this->belongsTo(Event::class, 'fk_event_id');
+        return $this->belongsTo(Event::class, 'event_id', 'event_id');
     }
 
-    public function attendee()
-    {
-        return $this->belongsTo(Attendee::class, 'fk_attendee_id');
-    }
-
-    public function payment()
-    {
-        return $this->hasOne(Payment::class);
-    }
+    
 }

@@ -11,20 +11,23 @@ class TicketsTableSeeder extends Seeder
     {
         DB::table('tickets')->insert([
             [
-                'fk_event_id' => 1,
-                'fk_attendee_id' => 1,
-                'qr_code' => 'QR123ABC',
+                'event_id' => 1,
+                'name' => 'Silver',
                 'price' => 150000,
-                'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'fk_event_id' => 2,
-                'fk_attendee_id' => 2,
-                'qr_code' => 'QR456DEF',
+                'event_id' => 2,
+                'name' => 'Gold',
                 'price' => 250000,
-                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'event_id' => 2,
+                'name' => 'Premium',
+                'price' => 350000,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

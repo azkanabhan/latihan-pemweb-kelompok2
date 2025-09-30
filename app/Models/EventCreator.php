@@ -11,7 +11,7 @@ class EventCreator extends Model
 
     protected $table = 'event_creators';
     protected $primaryKey = 'user_id';
-    public $incrementing = false;
+    public $incrementing = true;
     protected $keyType = 'int';
 
     protected $fillable = [

@@ -9,8 +9,11 @@ class ReviewRating extends Model
 {
     use HasFactory;
 
+    protected $table = 'reviews_ratings';
+    protected $primaryKey = 'review_id';
+
     protected $fillable = [
-        'user_id',
+        'attendee_id',
         'event_id',
         'body',
         'rating',
@@ -20,11 +23,11 @@ class ReviewRating extends Model
 
     public function attendee()
     {
-        return $this->belongsTo(Attendee::class, 'user_id');
+        return $this->belongsTo(Attendee::class, 'attendee_id', 'attendee_id');
     }
 
     public function event()
     {
-        return $this->belongsTo(Event::class);
+        return $this->belongsTo(Event::class, 'event_id', 'event_id');
     }
 }

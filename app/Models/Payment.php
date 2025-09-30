@@ -13,10 +13,12 @@ class Payment extends Model
 
     protected $fillable = [
         'attendee_id',
-        'ticket_id',
+        'event_id',
         'method',
         'amount',
-        'payment_date'
+        'payment_date',
+        'qr_code',
+        'status'
     ];
 
     public function attendee()
@@ -24,8 +26,8 @@ class Payment extends Model
         return $this->belongsTo(Attendee::class, 'attendee_id');
     }
 
-    public function ticket()
+    public function event()
     {
-        return $this->belongsTo(Ticket::class, 'ticket_id');
+        return $this->belongsTo(Event::class, 'event_id', 'event_id');
     }
 }
