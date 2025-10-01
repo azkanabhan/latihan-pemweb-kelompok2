@@ -7,18 +7,20 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('attendees', function (Blueprint $table) {
-            $table->id('attendee_id'); // PK
-            $table->string('username');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->integer('age');
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('attendees')) {
+            Schema::create('attendees', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->integer('age');
+                $table->timestamps();
+
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('attendees');
+        // no-op
     }
 };

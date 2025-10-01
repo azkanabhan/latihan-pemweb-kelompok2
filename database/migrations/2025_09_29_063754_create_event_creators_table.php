@@ -8,18 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('event_creators', function (Blueprint $table) {
-            $table->id('user_id'); // Primary Key
-            $table->string('email')->unique();
-            $table->string('username')->unique();
-            $table->string('password');
-            $table->integer('age')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('event_creators')) {
+            Schema::create('event_creators', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->integer('age')->nullable();
+                $table->timestamps();
+
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('event_creators');
+        // no-op
     }
 };

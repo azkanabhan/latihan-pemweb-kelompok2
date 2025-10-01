@@ -7,32 +7,33 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('payments', function (Blueprint $table) {
-            $table->id('payment_id'); // PK
-            $table->unsignedBigInteger('attendee_id'); // FK ke attendees
-            $table->unsignedBigInteger('event_id');    // FK ke events
-            $table->string('method'); // metode pembayaran
-            $table->decimal('amount', 10, 2); // jumlah
-            $table->dateTime('payment_date'); // tanggal bayar
-            $table->string('qr_code')->nullable();
-            $table->enum('status', ['active', 'used', 'cancelled']);
-            $table->timestamps();
+        if (! Schema::hasTable('payments')) {
+            Schema::create('payments', function (Blueprint $table) {
+                $table->id('payment_id');
+                $table->unsignedBigInteger('attendee_id'); // FK -> attendees.id (attendee)
+                $table->unsignedBigInteger('event_id');    // FK -> events.event_id
+                $table->string('method');
+                $table->decimal('amount', 10, 2);
+                $table->dateTime('payment_date');
+                $table->string('qr_code')->nullable();
+                $table->enum('status', ['active', 'used', 'cancelled']);
+                $table->timestamps();
 
-            // Foreign keys
-            $table->foreign('attendee_id')
-                ->references('attendee_id')
-                ->on('attendees')
-                ->onDelete('cascade');
+                $table->foreign('attendee_id')
+                    ->references('id')
+                    ->on('attendees')
+                    ->onDelete('cascade');
 
-            $table->foreign('event_id')
-                ->references('event_id')
-                ->on('events')
-                ->onDelete('cascade');
-        });
+                $table->foreign('event_id')
+                    ->references('event_id')
+                    ->on('events')
+                    ->onDelete('cascade');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('payments');
+        // no-op
     }
 };

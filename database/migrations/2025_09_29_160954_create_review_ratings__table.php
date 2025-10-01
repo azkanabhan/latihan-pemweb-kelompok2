@@ -8,17 +8,16 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('reviews_ratings', function (Blueprint $table) {
-            $table->id('review_id'); // PK
-            $table->unsignedBigInteger('attendee_id');  // FK ke attendees
-            $table->unsignedBigInteger('event_id'); // FK ke events
+            $table->id('review_id');
+            $table->unsignedBigInteger('attendee_id');  // FK -> attendees.id
+            $table->unsignedBigInteger('event_id');      // FK -> events.event_id
 
             $table->text('body');
-            $table->unsignedTinyInteger('rating'); // enforce via validation or DB check per driver
+            $table->unsignedTinyInteger('rating');
             $table->timestamps();
 
-            // FK
             $table->foreign('attendee_id')
-                ->references('attendee_id')
+                ->references('id')
                 ->on('attendees')
                 ->onDelete('cascade');
 
@@ -31,6 +30,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('reviews_ratings');
+        // no-op
     }
 };
