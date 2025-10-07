@@ -35,7 +35,15 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
         'update' => 'admin.users.update',
         'destroy' => 'admin.users.destroy',
     ]);
-    // Route::resource('admin/events', Admin\EventController::class);
+    Route::resource('admin/events', App\Http\Controllers\Admin\EventController::class)->except(['create','store'])->names([
+        'index' => 'admin.events.index',
+        'show' => 'admin.events.show',
+        'edit' => 'admin.events.edit',
+        'update' => 'admin.events.update',
+        'destroy' => 'admin.events.destroy',
+    ]);
+    Route::post('admin/events/{event}/approve', [App\Http\Controllers\Admin\EventController::class, 'approve'])->name('admin.events.approve');
+    Route::post('admin/events/{event}/reject', [App\Http\Controllers\Admin\EventController::class, 'reject'])->name('admin.events.reject');
 });
 
 RouteFacade::middleware(['auth', 'role:creator'])->group(function () {

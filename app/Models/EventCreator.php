@@ -10,19 +10,22 @@ class EventCreator extends Model
     use HasFactory;
 
     protected $table = 'event_creators';
-    protected $primaryKey = 'user_id';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
 
     protected $fillable = [
         'user_id',
-        'email',
-        'username',
-        'password',
         'age',
     ];
 
-    protected $hidden = [
-        'password',
-    ];
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class, 'events_creators_id', 'id');
+    }
 }
