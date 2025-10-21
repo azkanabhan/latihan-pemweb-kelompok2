@@ -2,26 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Ticket extends Model
 {
+    use HasFactory;
+
+    protected $primaryKey = 'ticket_id';
+
     protected $fillable = [
-        'qr_code',
+        'event_id',
+        'name',
         'price',
-        'events_id',
+
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-    ];
-
-    /**
-     * Get the event that owns the ticket.
-     */
-    public function event(): BelongsTo
+    public function event()
     {
-        return $this->belongsTo(Event::class, 'events_id');
+        return $this->belongsTo(Event::class, 'event_id', 'event_id');
     }
+
+
 }
