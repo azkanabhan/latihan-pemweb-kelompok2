@@ -1,9 +1,21 @@
 <x-guest-layout>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
+    
+    <!-- Logout Message -->
+    @if(session('message'))
+        <div class="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
+            {{ session('message') }}
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('login') }}">
         @csrf
+        
+        <!-- Redirect URL if user came from a specific page -->
+        @if(request('redirect'))
+            <input type="hidden" name="redirect" value="{{ request('redirect') }}">
+        @endif
 
         <!-- Email Address -->
         <div>

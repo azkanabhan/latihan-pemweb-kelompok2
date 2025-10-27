@@ -29,6 +29,9 @@ class Event extends Model
         'rejected_at' => 'datetime',
     ];
 
+    const CREATED_AT = 'created_at';
+    const UPDATED_AT = 'updated_at';
+
     public function creator()
     {
         return $this->belongsTo(EventCreator::class, 'events_creators_id', 'id');
@@ -68,5 +71,26 @@ class Event extends Model
     public function reviews()
     {
         return $this->hasMany(ReviewRating::class, 'event_id', 'event_id');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'event_id', 'event_id');
+    }
+
+    public function getBookedCapacityAttribute()
+    {
+        return $this->payments()->where('status', 'active')->count();
+    }
+
+    public function getAvailabilityStatusAttribute()
+    {
+        $booked = $this->booked_capacity;
+        $capacity = $this->event_capacity;
+        
+        if ($booked >= $capacity) {
+            return 'fully booked';
+        }
+        return 'open';
     }
 }

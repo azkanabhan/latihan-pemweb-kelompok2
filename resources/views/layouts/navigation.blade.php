@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+                                                        <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -21,6 +21,11 @@
                         </x-nav-link>
                         <x-nav-link :href="route('admin.events.index')" :active="request()->routeIs('admin.events.*')">
                             {{ __('Events') }}
+                        </x-nav-link>
+                    @endif
+                    @if (Auth::user() && Auth::user()->role === 'attendee')
+                        <x-nav-link :href="route('tickets.index')" :active="request()->routeIs('tickets.*')">
+                            {{ __('My Tickets') }}
                         </x-nav-link>
                     @endif
                 </div>
@@ -84,6 +89,11 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.events.index')" :active="request()->routeIs('admin.events.*')">
                     {{ __('Events') }}
+                </x-responsive-nav-link>
+            @endif
+            @if (Auth::user() && Auth::user()->role === 'attendee')
+                <x-responsive-nav-link :href="route('tickets.index')" :active="request()->routeIs('tickets.*')">
+                    {{ __('My Tickets') }}
                 </x-responsive-nav-link>
             @endif
         </div>

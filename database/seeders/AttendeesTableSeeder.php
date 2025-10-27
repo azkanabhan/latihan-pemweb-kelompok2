@@ -19,7 +19,6 @@ class AttendeesTableSeeder extends Seeder
                 ['user_id' => $johnId],
                 [
                     'user_id' => $johnId,
-                    'age' => 22,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]
@@ -31,7 +30,6 @@ class AttendeesTableSeeder extends Seeder
                 ['user_id' => $janeId],
                 [
                     'user_id' => $janeId,
-                    'age' => 25,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]

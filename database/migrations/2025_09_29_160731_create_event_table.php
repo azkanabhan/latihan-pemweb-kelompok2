@@ -17,6 +17,9 @@ return new class extends Migration {
                 $table->string('event_location');
                 $table->dateTime('event_date');
                 $table->integer('event_capacity');
+                $table->enum('status', ['requested', 'approved', 'rejected'])->default('requested');
+                $table->timestamp('approved_at')->nullable();
+                $table->timestamp('rejected_at')->nullable();
                 $table->timestamps();
 
                 $table->foreign('events_creators_id')

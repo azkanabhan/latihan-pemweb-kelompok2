@@ -10,18 +10,9 @@ class Attendee extends Model
     use HasFactory;
 
     protected $table = 'attendees';
-    protected $primaryKey = 'attendee_id';
-    public $incrementing = true;
-    protected $keyType = 'int';
+    // Primary key is 'id' by default
 
     protected $fillable = [
-        'username',
-        'email',
-        'password',
-        'age',
-    ];
-
-    protected $hidden = [
-        'password',
+        'user_id',
     ];
 }

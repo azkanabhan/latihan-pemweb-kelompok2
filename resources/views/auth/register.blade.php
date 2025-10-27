@@ -1,12 +1,24 @@
 <x-guest-layout>
     <form method="POST" action="{{ route('register') }}">
         @csrf
+        
+        <!-- Redirect URL if user came from a specific page -->
+        @if(request('redirect'))
+            <input type="hidden" name="redirect" value="{{ request('redirect') }}">
+        @endif
 
         <!-- Name -->
         <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
+        </div>
+
+        <!-- Username -->
+        <div>
+            <x-input-label for="username" :value="__('Username')" />
+            <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" :value="old('username')" required autofocus autocomplete="username" />
+            <x-input-error :messages="$errors->get('username')" class="mt-2" />
         </div>
 
         <!-- Email Address -->

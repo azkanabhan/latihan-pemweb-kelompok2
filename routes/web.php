@@ -1,12 +1,33 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
-});
+    $events = App\Models\Event::with(['tickets', 'payments'])
+        ->approved()
+        ->whereDate('event_date', '>=', now()->toDateString())
+        ->orderBy('event_date', 'asc')
+        ->get();
+
+    return view('welcome', compact('events'));
+})->name('events.index');
+
+// Public event details
+Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
+
+// Payment routes
+Route::post('/payment/create-va', [PaymentController::class, 'createVa'])->name('payment.create-va');
+Route::get('/payment/check-status/{vaNumber}', [PaymentController::class, 'checkStatus'])->name('payment.check-status');
+
+// Webhook route (no CSRF protection needed - excluded in middleware)
+Route::post('/webhook/payment', [App\Http\Controllers\WebhookController::class, 'handle'])
+    ->name('webhook.payment')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -91,7 +112,7 @@ RouteFacade::middleware(['auth', 'role:attendee'])->group(function () {
         return view('dashboard');
     })->name('attendee.dashboard');
 
-    // Attendee: view joined events and tickets
-    // Route::get('attendee/events', ...);
-    // Route::get('attendee/tickets', ...);
+    // Attendee: view tickets
+    Route::get('/attendee/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/attendee/tickets/{paymentId}/qrcode', [TicketController::class, 'showQrCode'])->name('tickets.qrcode');
 });

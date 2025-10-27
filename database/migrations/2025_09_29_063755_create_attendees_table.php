@@ -9,9 +9,8 @@ return new class extends Migration {
     {
         if (! Schema::hasTable('attendees')) {
             Schema::create('attendees', function (Blueprint $table) {
-                $table->id();
-                $table->unsignedBigInteger('user_id');
-                $table->integer('age');
+                $table->id(); // This creates 'id' column
+                $table->unsignedBigInteger('user_id')->nullable();
                 $table->timestamps();
 
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

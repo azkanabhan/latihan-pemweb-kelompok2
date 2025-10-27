@@ -14,11 +14,23 @@ class Payment extends Model
     protected $fillable = [
         'attendee_id',
         'event_id',
+        'user_id',
+        'ticket_id',
+        'quantity',
         'method',
         'amount',
         'payment_date',
         'qr_code',
-        'status'
+        'status',
+        'external_id',
+        'va_number',
+        'payment_url',
+        'expired_at',
+    ];
+
+    protected $casts = [
+        'expired_at' => 'datetime',
+        'payment_date' => 'datetime',
     ];
 
     public function attendee()
@@ -29,5 +41,15 @@ class Payment extends Model
     public function event()
     {
         return $this->belongsTo(Event::class, 'event_id', 'event_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function ticket()
+    {
+        return $this->belongsTo(Ticket::class, 'ticket_id', 'ticket_id');
     }
 }

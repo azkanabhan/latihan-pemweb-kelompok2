@@ -28,4 +28,9 @@ class EventCreator extends Model
     {
         return $this->hasMany(Event::class, 'events_creators_id', 'id');
     }
+
+    public function attendees()
+    {
+        return $this->hasMany(Attendee::class);
+    }
 }

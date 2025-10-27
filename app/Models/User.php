@@ -62,4 +62,14 @@ class User extends Authenticatable
     {
         return $this->role === 'attendee';
     }
+
+    public function eventCreator()
+    {
+        return $this->hasOne(EventCreator::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Payment::class, 'user_id', 'id');
+    }
 }
