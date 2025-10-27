@@ -25,6 +25,12 @@
                 @if($ev->rejected_at)
                 <p class="text-red-700">Ditolak: {{ $ev->rejected_at->format('Y-m-d H:i') }}</p>
                 @endif
+                
+                <a href="{{ route('creator.events.participants', ['id' => $ev->event_id]) }}"
+                class="inline-block mt-3 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                Lihat Peserta
+                </a>
+
             </div>
         </div>
         @endforeach

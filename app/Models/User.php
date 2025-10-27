@@ -62,4 +62,23 @@ class User extends Authenticatable
     {
         return $this->role === 'attendee';
     }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class, 'events_creators_id');
+    }
+
+    public function attendees()
+    {
+        return $this->hasManyThrough(
+        Attendee::class,
+        Event::class,
+        'events_creators_id',
+        'event_id',
+        'id',
+        'id'
+        );
+    }
+
 }
+

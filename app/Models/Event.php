@@ -4,11 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Attendee;
+use App\Models\EventCreator;
+use App\Models\Ticket;
+use App\Models\ReviewRating;
 
 class Event extends Model
 {
     use HasFactory;
 
+    // Primary key custom
     protected $primaryKey = 'event_id';
 
     protected $fillable = [
@@ -29,11 +34,25 @@ class Event extends Model
         'rejected_at' => 'datetime',
     ];
 
+    // Relasi ke pembuat event
     public function creator()
     {
         return $this->belongsTo(EventCreator::class, 'events_creators_id', 'id');
     }
 
+    // Relasi ke tiket
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class, 'event_id', 'event_id');
+    }
+
+    // Relasi ke ulasan
+    public function reviews()
+    {
+        return $this->hasMany(ReviewRating::class, 'event_id', 'event_id');
+    }
+
+    // Scope status event
     public function scopeRequested($query)
     {
         return $query->where('status', 'requested');
@@ -44,6 +63,7 @@ class Event extends Model
         return $query->where('status', 'approved');
     }
 
+    // Metode approve/reject
     public function approve(): void
     {
         $this->status = 'approved';
@@ -60,13 +80,16 @@ class Event extends Model
         $this->save();
     }
 
-    public function tickets()
+    // 🔥 Relasi Many-to-Many ke Attendee
+    public function attendees()
     {
-        return $this->hasMany(Ticket::class, 'event_id', 'event_id');
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(ReviewRating::class, 'event_id', 'event_id');
+        return $this->belongsToMany(
+            Attendee::class,   // Model tujuan
+            'attendee_event',  // Nama tabel pivot
+            'event_id',        // FK pivot -> events
+            'attendee_id',     // FK pivot -> attendees
+            'event_id',        // PK di tabel events
+            'id'               // PK di tabel attendees
+        );
     }
 }

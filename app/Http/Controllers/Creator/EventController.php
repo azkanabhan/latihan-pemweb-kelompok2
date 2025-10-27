@@ -41,4 +41,10 @@ class EventController extends Controller
 
     return redirect()->back()->with('success', 'Event created and requested for approval.');
   }
+  public function showParticipants($eventId)
+  {
+      $event = Event::with('attendees')->findOrFail($eventId);
+      return view('creator.participants', compact('event'));
+  }
+
 }

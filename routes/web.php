@@ -8,9 +8,40 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// SEMUA LOGIKA DASHBOARD SEKARANG ADA DI SINI
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    $user = auth()->user();
+    $data = []; // Variabel untuk menampung data
+
+    if ($user->role === 'admin') {
+        $events = App\Models\Event::with('creator.user')
+            ->requested()
+            ->orderByDesc('event_date')
+            ->limit(25)
+            ->get();
+        $data['admin_requested_events'] = $events;
+
+    } else if ($user->role === 'creator') {
+        $creator = App\Models\EventCreator::where('user_id', $user->id)->first();
+        $creatorIds = $creator ? [$creator->id] : [];
+        $idsForQuery = array_values(array_unique(array_merge($creatorIds, [$user->id])));
+        
+        $creator_events = App\Models\Event::with('creator')
+            ->whereIn('events_creators_id', $idsForQuery)
+            ->orderBy('event_date', 'asc')
+            ->get();
+        $data['creator_events'] = $creator_events;
+
+    } else if ($user->role === 'attendee') {
+        // Nanti Anda bisa tambahkan kueri untuk attendee di sini
+        // $data['joined_events'] = ...
+    }
+
+    // Kirim view DENGAN DATA yang sesuai
+    return view('dashboard', $data);
+    
 })->middleware(['auth', 'verified'])->name('dashboard');
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -20,19 +51,9 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
+// RUTE UNTUK ADMIN (SELAIN DASHBOARD)
 RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin', function () {
-        // fetch recent requested events for admin dashboard
-        $events = App\Models\Event::with('creator.user')
-            ->requested()
-            ->orderByDesc('event_date')
-            ->limit(25)
-            ->get();
-
-        return view('dashboard', ['admin_requested_events' => $events]);
-    })->name('admin.dashboard');
-
-    // Admin: CRUD users (creator/attendee) & events
+     // Admin: CRUD users (creator/attendee) & events
     Route::resource('admin/users', App\Http\Controllers\Admin\UserController::class)->names([
         'index' => 'admin.users.index',
         'create' => 'admin.users.create',
@@ -53,45 +74,25 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('admin/events/{event}/reject', [App\Http\Controllers\Admin\EventController::class, 'reject'])->name('admin.events.reject');
 });
 
+// RUTE UNTUK CREATOR (SELAIN DASHBOARD)
 RouteFacade::middleware(['auth', 'role:creator'])->group(function () {
-    Route::get('/creator', function () {
-        $user = auth()->user();
-        $events = collect();
-
-        if ($user) {
-            // Get all event_creator ids that belong to the authenticated user
-            $creatorIds = App\Models\EventCreator::where('user_id', $user->id)->pluck('id');
-
-            // Fallback: some records may have events_creators_id set directly to the user's id
-            // Merge the user's id so we cover both normal FK mapping (event_creator.id) and
-            // the case where events_creators_id was manually set to the users.id value.
-            $ids = $creatorIds->merge([$user->id])->unique()->values()->toArray();
-
-            if (! empty($ids)) {
-                // Fetch events whose events_creators_id is one of the ids (creator row ids or user id fallback)
-                $events = App\Models\Event::with('creator')
-                    ->whereIn('events_creators_id', $ids)
-                    ->orderBy('event_date', 'asc')
-                    ->get();
-            }
-        }
-
-        return view('dashboard', ['creator_events' => $events]);
-    })->name('creator.dashboard');
-
-    // Creator: CRUD events owned by self, view attendees, view balance
-    // Create event (creator)
+    // Creator: CRUD events owned by self
     Route::post('creator/events', [App\Http\Controllers\Creator\EventController::class, 'store'])->name('creator.events.store');
-    // Route::get('creator/events/{event}/attendees', ...);
-    // Route::get('creator/balance', ...);
+    Route::get('creator/events/{id}/participants',
+        [App\Http\Controllers\Creator\EventController::class, 'showParticipants'])
+        ->name('creator.events.participants');
 });
 
-RouteFacade::middleware(['auth', 'role:attendee'])->group(function () {
-    Route::get('/attendee', function () {
-        return view('dashboard');
-    })->name('attendee.dashboard');
+// ALIAS AGAR ROUTE creator.dashboard TETAP BISA DIPAKAI DI VIEW
+RouteFacade::get('/creator/dashboard', function () {
+    return redirect()->route('dashboard');
+})->middleware(['auth', 'verified', 'role:creator'])->name('creator.dashboard');
 
+// RUTE UNTUK ATTENDEE (SELAIN DASHBOARD)
+RouteFacade::middleware(['auth', 'role:attendee'])->group(function () {
     // Attendee: view joined events and tickets
     // Route::get('attendee/events', ...);
     // Route::get('attendee/tickets', ...);
 });
+
+
