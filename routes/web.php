@@ -18,11 +18,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin', function () {
-        return view('dashboard');
+        // fetch recent requested events for admin dashboard
+        $events = App\Models\Event::with('creator.user')
+            ->requested()
+            ->orderByDesc('event_date')
+            ->limit(25)
+            ->get();
+
+        return view('dashboard', ['admin_requested_events' => $events]);
     })->name('admin.dashboard');
 
     // Admin: CRUD users (creator/attendee) & events
@@ -35,7 +42,7 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
         'update' => 'admin.users.update',
         'destroy' => 'admin.users.destroy',
     ]);
-    Route::resource('admin/events', App\Http\Controllers\Admin\EventController::class)->except(['create','store'])->names([
+    Route::resource('admin/events', App\Http\Controllers\Admin\EventController::class)->except(['create', 'store'])->names([
         'index' => 'admin.events.index',
         'show' => 'admin.events.show',
         'edit' => 'admin.events.edit',
@@ -48,11 +55,33 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
 
 RouteFacade::middleware(['auth', 'role:creator'])->group(function () {
     Route::get('/creator', function () {
-        return view('dashboard');
+        $user = auth()->user();
+        $events = collect();
+
+        if ($user) {
+            // Get all event_creator ids that belong to the authenticated user
+            $creatorIds = App\Models\EventCreator::where('user_id', $user->id)->pluck('id');
+
+            // Fallback: some records may have events_creators_id set directly to the user's id
+            // Merge the user's id so we cover both normal FK mapping (event_creator.id) and
+            // the case where events_creators_id was manually set to the users.id value.
+            $ids = $creatorIds->merge([$user->id])->unique()->values()->toArray();
+
+            if (! empty($ids)) {
+                // Fetch events whose events_creators_id is one of the ids (creator row ids or user id fallback)
+                $events = App\Models\Event::with('creator')
+                    ->whereIn('events_creators_id', $ids)
+                    ->orderBy('event_date', 'asc')
+                    ->get();
+            }
+        }
+
+        return view('dashboard', ['creator_events' => $events]);
     })->name('creator.dashboard');
 
     // Creator: CRUD events owned by self, view attendees, view balance
-    // Route::resource('creator/events', Creator\EventController::class);
+    // Create event (creator)
+    Route::post('creator/events', [App\Http\Controllers\Creator\EventController::class, 'store'])->name('creator.events.store');
     // Route::get('creator/events/{event}/attendees', ...);
     // Route::get('creator/balance', ...);
 });

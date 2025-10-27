@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,7 +17,10 @@ class Event extends Model
         'event_location',
         'event_date',
         'event_capacity',
-        'events_creators_id'
+        'events_creators_id',
+        'status',
+        'approved_at',
+        'rejected_at'
     ];
 
     protected $casts = [
