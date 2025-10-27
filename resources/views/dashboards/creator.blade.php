@@ -2,6 +2,8 @@
     <h3 class="text-lg text-center font-semibold mb-4">Creator Dashboard</h3>
     <h4 class="font-semibold mb-2">Daftar Event Saya</h4>
 
+    {{-- creator_events is provided by route or by a view composer --}}
+
     @if(isset($creator_events) && $creator_events->count())
     <div class="space-y-4">
         @foreach($creator_events as $ev)
@@ -34,22 +36,7 @@
     @endif
 </div>
 
-@if(config('app.debug'))
-@php
-$authId = auth()->id();
-$creatorIds = \App\Models\EventCreator::where('user_id', $authId)->pluck('id')->toArray();
-$idsForQuery = array_values(array_unique(array_merge($creatorIds, [$authId])));
-$found = \App\Models\Event::whereIn('events_creators_id', $idsForQuery)->pluck('event_id')->toArray();
-@endphp
-
-<div class="mt-4 p-3 border rounded bg-gray-50 text-sm">
-    <strong>DEBUG (visible because APP_DEBUG=true)</strong>
-    <div>auth()->id(): {{ $authId }}</div>
-    <div>EventCreator ids for this user: {{ json_encode($creatorIds) }}</div>
-    <div>Ids used for query (creator ids + fallback auth id): {{ json_encode($idsForQuery) }}</div>
-    <div>Events matched by that query (ids): {{ json_encode($found) }} (count: {{ count($found) }})</div>
-</div>
-@endif
+{{-- debug blocks removed (moved to log/view-composer) --}}
 
 
 
@@ -150,6 +137,7 @@ $found = \App\Models\Event::whereIn('events_creators_id', $idsForQuery)->pluck('
                 show();
             }
         } catch (e) {
-            /* noop */ }
+            /* noop */
+        }
     })();
 </script>
