@@ -1,33 +1,37 @@
 <x-app-layout>
-    <div class="container mx-auto py-6 px-4">
-        <h2 class="text-2xl font-bold mb-6">
-            Peserta untuk Event: {{ $event->event_name }}
+    <div class="container mx-auto py-8 px-6">
+        {{-- Judul --}}
+        <h2 class="text-3xl font-bold mb-6 text-gray-800">
+            Peserta untuk Event: 
+            <span class="text-indigo-700">{{ $event->event_name }}</span>
         </h2>
 
+        {{-- Jika belum ada peserta --}}
         @if ($event->attendees->isEmpty())
-            <div class="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded">
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-md shadow-sm">
                 Belum ada peserta yang mendaftar untuk event ini.
             </div>
         @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full border border-gray-300 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                    <thead class="bg-gray-100 dark:bg-gray-700">
-                        <tr>
-                            <th class="border px-4 py-2 text-left text-gray-700 dark:text-gray-200">Nama</th>
-                            <th class="border px-4 py-2 text-left text-gray-700 dark:text-gray-200">Email</th>
-                            <th class="border px-4 py-2 text-center text-gray-700 dark:text-gray-200">Usia</th>
+            {{-- Tabel peserta --}}
+            <div class="overflow-x-auto bg-white border border-gray-300 rounded-lg shadow-md">
+                <table class="min-w-full border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-100 border-b border-gray-300">
+                            <th class="px-5 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Nama</th>
+                            <th class="px-5 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Email</th>
+                            <th class="px-5 py-3 text-center font-semibold text-gray-700 uppercase tracking-wider">Usia</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($event->attendees as $attendee)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="border px-4 py-2 text-gray-800 dark:text-gray-100">
-                                    {{ $attendee->username ?? '-' }}
+                            <tr class="even:bg-gray-50 hover:bg-indigo-50 transition-colors duration-150">
+                                <td class="px-5 py-3 border-b border-gray-200 text-gray-800">
+                                    {{ $attendee->user->name ?? '-' }}
                                 </td>
-                                <td class="border px-4 py-2 text-gray-800 dark:text-gray-100">
-                                    {{ $attendee->email ?? '-' }}
+                                <td class="px-5 py-3 border-b border-gray-200 text-gray-800">
+                                    {{ $attendee->user->email ?? '-' }}
                                 </td>
-                                <td class="border px-4 py-2 text-center text-gray-800 dark:text-gray-100">
+                                <td class="px-5 py-3 border-b border-gray-200 text-center text-gray-800">
                                     {{ $attendee->age ?? '-' }}
                                 </td>
                             </tr>
@@ -35,12 +39,18 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- Total peserta --}}
+            <div class="mt-4 text-gray-700 text-sm">
+                Total Peserta: 
+                <span class="font-semibold">{{ $event->attendees->count() }}</span> orang
+            </div>
         @endif
 
-        {{-- Tombol permanen tanpa efek hover --}}
-        <div class="mt-6">
-            <a href="{{ route('creator.dashboard') }}"
-               class="inline-block bg-indigo-600 text-white font-semibold px-4 py-2 rounded shadow-md border border-indigo-700 cursor-pointer select-none">
+        {{-- Tombol kembali --}}
+        <div class="mt-8">
+            <a href="{{ route('dashboard') }}"
+               class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow-md border border-indigo-700 transition-all duration-150">
                ← Kembali ke Dashboard
             </a>
         </div>
