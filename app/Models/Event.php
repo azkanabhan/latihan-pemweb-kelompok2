@@ -40,7 +40,7 @@ class Event extends Model
     // Relasi ke pembuat event
     public function creator()
     {
-        return $this->belongsTo(EventCreator::class, 'events_creators_id', 'id');
+        return $this->belongsTo(EventCreator::class, 'events_creators_id', 'user_id');
     }
 
     // Relasi ke tiket
@@ -53,6 +53,12 @@ class Event extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class, 'event_id', 'event_id');
+    }
+
+    // Relasi ke tiket
+    public function ticket_holders()
+    {
+        return $this->hasMany(TicketHolder::class, 'event_id', 'event_id');
     }
 
     // Relasi ke ulasan
@@ -70,6 +76,11 @@ class Event extends Model
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
     }
 
     // Metode approve/reject
@@ -107,10 +118,10 @@ class Event extends Model
     {
         // Consider payments with status 'active' or 'used' as confirmed bookings
         if ($this->relationLoaded('payments')) {
-            return $this->payments->whereIn('status', ['active', 'used'])->sum('quantity');
+            return $this->payments->whereIn('status', 'paid')->sum('quantity');
         }
 
-        return $this->payments()->whereIn('status', ['active', 'used'])->sum('quantity');
+        return $this->payments()->whereIn('status', 'paid')->sum('quantity');
     }
 
     // Accessor: availability status ('open' when there are seats left)

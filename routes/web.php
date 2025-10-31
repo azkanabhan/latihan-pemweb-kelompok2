@@ -22,6 +22,7 @@ Route::get('/events/{event}', [EventController::class, 'show'])->name('events.sh
 
 // Payment routes
 Route::post('/payment/create-va', [PaymentController::class, 'createVa'])->name('payment.create-va');
+Route::post('/payment/check-attendees', [PaymentController::class, 'checkAttendees'])->name('payment.check-attendees');
 Route::get('/payment/check-status/{vaNumber}', [PaymentController::class, 'checkStatus'])->name('payment.check-status');
 
 // Webhook route (no CSRF protection needed - excluded in middleware)
@@ -43,13 +44,26 @@ Route::get('/dashboard', function () {
     } else if ($user->role === 'creator') {
         $creator = App\Models\EventCreator::where('user_id', $user->id)->first();
         $creatorIds = $creator ? [$creator->id] : [];
-        $idsForQuery = array_values(array_unique(array_merge($creatorIds, [$user->id])));
+        $idsForQuery = $creatorIds;
 
-        $creator_events = App\Models\Event::with('creator')
+        // Pisahkan event berdasarkan status
+        $data['creator_events_requested'] = App\Models\Event::with('creator')
             ->whereIn('events_creators_id', $idsForQuery)
+            ->requested()
             ->orderBy('event_date', 'asc')
             ->get();
-        $data['creator_events'] = $creator_events;
+
+        $data['creator_events_approved'] = App\Models\Event::with('creator')
+            ->whereIn('events_creators_id', $idsForQuery)
+            ->approved()
+            ->orderBy('event_date', 'asc')
+            ->get();
+
+        $data['creator_events_rejected'] = App\Models\Event::with('creator')
+            ->whereIn('events_creators_id', $idsForQuery)
+            ->rejected()
+            ->orderBy('event_date', 'asc')
+            ->get();
     } else if ($user->role === 'attendee') {
         // Nanti Anda bisa tambahkan kueri untuk attendee di sini
         // $data['joined_events'] = ...
@@ -115,5 +129,5 @@ RouteFacade::middleware(['auth', 'role:attendee'])->group(function () {
 
     // Attendee: view tickets
     Route::get('/attendee/tickets', [TicketController::class, 'index'])->name('tickets.index');
-    Route::get('/attendee/tickets/{paymentId}/qrcode', [TicketController::class, 'showQrCode'])->name('tickets.qrcode');
+    Route::get('/attendee/tickets/{ticketHolderId}/qrcode', [TicketController::class, 'showQrCode'])->name('tickets.qrcode');
 });

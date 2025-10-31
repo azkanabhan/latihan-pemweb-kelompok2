@@ -1,44 +1,122 @@
 <div>
     <h3 class="text-lg text-center font-semibold mb-4">Creator Dashboard</h3>
-    <h4 class="font-semibold mb-2">Daftar Event Saya</h4>
+    <h4 class="font-semibold mb-4">Daftar Event Saya</h4>
 
-    {{-- creator_events is provided by route or by a view composer --}}
+    {{-- Event berdasarkan status: Requested, Approved, Rejected --}}
 
-    @if(isset($creator_events) && $creator_events->count())
-    <div class="space-y-4">
-        @foreach($creator_events as $ev)
-        <div class="border p-4 rounded">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h5 class="text-lg font-bold">{{ $ev->event_name }}</h5>
-                    <div class="text-sm text-gray-600">{{ $ev->event_location }} · {{ $ev->event_date?->format('Y-m-d H:i') }}</div>
+    {{-- Event yang Requested --}}
+    <div class="mb-6">
+        <h5 class="text-md font-semibold mb-3 text-yellow-700 flex items-center gap-2">
+            <span class="px-2 py-1 rounded bg-yellow-600 text-white text-xs">Requested</span>
+            <span class="text-gray-600 text-sm">({{ isset($creator_events_requested) ? $creator_events_requested->count() : 0 }})</span>
+        </h5>
+        @if(isset($creator_events_requested) && $creator_events_requested->count())
+        <div class="space-y-4">
+            @foreach($creator_events_requested as $ev)
+            <div class="border border-yellow-300 p-4 rounded bg-yellow-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-lg font-bold">{{ $ev->event_name }}</h5>
+                        <div class="text-sm text-gray-600">{{ $ev->event_location }} · {{ $ev->event_date?->format('Y-m-d H:i') }}</div>
+                    </div>
+                    <div class="text-sm">
+                        <span class="px-2 py-1 rounded text-white text-xs bg-yellow-600">Requested</span>
+                    </div>
                 </div>
-                <div class="text-sm">
-                    <span class="px-2 py-1 rounded text-white text-xs {{ $ev->status === 'approved' ? 'bg-green-600' : ($ev->status === 'rejected' ? 'bg-red-600' : 'bg-yellow-600') }}">{{ ucfirst($ev->status) }}</span>
+
+                <div class="mt-3 text-sm text-gray-700">
+                    <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    <p class="mt-2 text-gray-500">Menunggu persetujuan admin...</p>
                 </div>
             </div>
-
-            <div class="mt-3 text-sm text-gray-700">
-                <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
-                <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
-                @if($ev->approved_at)
-                <p class="text-green-700">Disetujui: {{ $ev->approved_at->format('Y-m-d H:i') }}</p>
-                @endif
-                @if($ev->rejected_at)
-                <p class="text-red-700">Ditolak: {{ $ev->rejected_at->format('Y-m-d H:i') }}</p>
-                @endif
-                
-                <a href="{{ route('creator.events.participants', ['id' => $ev->event_id]) }}"
-                class="inline-block mt-3 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                Lihat Peserta
-                </a>
-
-            </div>
+            @endforeach
         </div>
-        @endforeach
+        @else
+        <div class="text-sm text-gray-500 italic p-3 bg-gray-50 rounded">Tidak ada event dengan status requested.</div>
+        @endif
     </div>
-    @else
-    <div class="text-sm text-gray-600">Belum ada event. Buat event baru menggunakan form di atas.</div>
+
+    {{-- Event yang Approved --}}
+    <div class="mb-6">
+        <h5 class="text-md font-semibold mb-3 text-green-700 flex items-center gap-2">
+            <span class="px-2 py-1 rounded bg-green-600 text-white text-xs">Approved</span>
+            <span class="text-gray-600 text-sm">({{ isset($creator_events_approved) ? $creator_events_approved->count() : 0 }})</span>
+        </h5>
+        @if(isset($creator_events_approved) && $creator_events_approved->count())
+        <div class="space-y-4">
+            @foreach($creator_events_approved as $ev)
+            <div class="border border-green-300 p-4 rounded bg-green-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-lg font-bold">{{ $ev->event_name }}</h5>
+                        <div class="text-sm text-gray-600">{{ $ev->event_location }} · {{ $ev->event_date?->format('Y-m-d H:i') }}</div>
+                    </div>
+                    <div class="text-sm">
+                        <span class="px-2 py-1 rounded text-white text-xs bg-green-600">Approved</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 text-sm text-gray-700">
+                    <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    @if($ev->approved_at)
+                    <p class="text-green-700 mt-2">✓ Disetujui: {{ $ev->approved_at->format('Y-m-d H:i') }}</p>
+                    @endif
+                    
+                    <a href="{{ route('creator.events.participants', ['id' => $ev->event_id]) }}"
+                    class="inline-block mt-3 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Lihat Peserta
+                    </a>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <div class="text-sm text-gray-500 italic p-3 bg-gray-50 rounded">Tidak ada event dengan status approved.</div>
+        @endif
+    </div>
+
+    {{-- Event yang Rejected --}}
+    <div class="mb-6">
+        <h5 class="text-md font-semibold mb-3 text-red-700 flex items-center gap-2">
+            <span class="px-2 py-1 rounded bg-red-600 text-white text-xs">Rejected</span>
+            <span class="text-gray-600 text-sm">({{ isset($creator_events_rejected) ? $creator_events_rejected->count() : 0 }})</span>
+        </h5>
+        @if(isset($creator_events_rejected) && $creator_events_rejected->count())
+        <div class="space-y-4">
+            @foreach($creator_events_rejected as $ev)
+            <div class="border border-red-300 p-4 rounded bg-red-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-lg font-bold">{{ $ev->event_name }}</h5>
+                        <div class="text-sm text-gray-600">{{ $ev->event_location }} · {{ $ev->event_date?->format('Y-m-d H:i') }}</div>
+                    </div>
+                    <div class="text-sm">
+                        <span class="px-2 py-1 rounded text-white text-xs bg-red-600">Rejected</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 text-sm text-gray-700">
+                    <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    @if($ev->rejected_at)
+                    <p class="text-red-700 mt-2">✗ Ditolak: {{ $ev->rejected_at->format('Y-m-d H:i') }}</p>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <div class="text-sm text-gray-500 italic p-3 bg-gray-50 rounded">Tidak ada event dengan status rejected.</div>
+        @endif
+    </div>
+
+    {{-- Pesan jika tidak ada event sama sekali --}}
+    @if((!isset($creator_events_requested) || $creator_events_requested->count() === 0) &&
+        (!isset($creator_events_approved) || $creator_events_approved->count() === 0) &&
+        (!isset($creator_events_rejected) || $creator_events_rejected->count() === 0))
+    <div class="text-sm text-gray-600 text-center py-8 bg-gray-50 rounded">Belum ada event. Buat event baru menggunakan tombol di bawah.</div>
     @endif
 </div>
 

@@ -178,7 +178,7 @@
                                                 Quantity
                                             </label>
                                             <select id="quantity" name="quantity" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white" required>
-                                                <option value="1">1</option>
+                                                <!-- options will be populated by JS -->
                                             </select>
                                         </div>
 
@@ -187,9 +187,9 @@
                                             <label for="attendee_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 Attendee Email
                                             </label>
-                                            <input type="email" name="attendee_emails[]" id="attendee_email" 
+                                            <input type="email" name="attendee_emails[]" id="attendee_email"
                                                 value="{{ auth()->check() ? auth()->user()->email : '' }}"
-                                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
+                                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                                 placeholder="Enter your email"
                                                 required>
                                         </div>
@@ -211,8 +211,8 @@
                                                         <form method="POST" action="{{ route('logout') }}" class="w-full">
                                                             @csrf
                                                             <input type="hidden" name="redirect" value="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}">
-                                                            
-                                                            <button type="submit" 
+
+                                                            <button type="submit"
                                                                 class="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition cursor-pointer">
                                                                 Logout & Continue as Attendee
                                                             </button>
@@ -389,6 +389,7 @@
             document.addEventListener('DOMContentLoaded', function() {
                 const form = document.getElementById('ticketForm');
                 const quantitySelect = document.getElementById('quantity');
+                const emailContainer = document.getElementById('emailContainer');
                 const userEmail = @json(auth()->check() ? auth()->user()->email : null);
                 const isLoggedIn = @json(auth()->check());
                 const tickets = @json($event->tickets);
@@ -414,7 +415,40 @@
                 const eventId = {{ $event->event_id }};
                 let paymentUrl = '';
 
-                // No need for updateEmailInputs since we only have 1 email field now
+                // Populate quantity options (1..5 default)
+                for (let i = 1; i <= 5; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = String(i);
+                    opt.textContent = String(i);
+                    quantitySelect.appendChild(opt);
+                }
+
+                function rebuildEmailInputs(qty) {
+                    emailContainer.innerHTML = '';
+                    const label = document.createElement('label');
+                    label.className = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
+                    label.textContent = 'Attendee Emails';
+                    emailContainer.appendChild(label);
+
+                    for (let i = 0; i < qty; i++) {
+                        const input = document.createElement('input');
+                        input.type = 'email';
+                        input.name = 'attendee_emails[]';
+                        input.required = true;
+                        input.placeholder = `Attendee #${i+1} email`;
+                        input.className = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2';
+                        if (i === 0 && userEmail) input.value = userEmail;
+                        emailContainer.appendChild(input);
+                    }
+                }
+
+                // Initial emails
+                rebuildEmailInputs(1);
+
+                // Update on quantity change
+                quantitySelect.addEventListener('change', function() {
+                    rebuildEmailInputs(parseInt(quantitySelect.value));
+                });
 
                 function updateModalContent() {
                     // Get selected ticket
@@ -481,13 +515,31 @@
 
                 // Event listeners (only if checkoutBtn exists)
                 if (checkoutBtn) {
-                    checkoutBtn.addEventListener('click', function(e) {
+                    checkoutBtn.addEventListener('click', async function(e) {
                         e.preventDefault();
 
                         // Validate form
                         if (!form.checkValidity()) {
                             form.reportValidity();
                             return;
+                        }
+
+                        // Check attendee accounts first
+                        const emailInputs = document.querySelectorAll('input[name="attendee_emails[]"]');
+                        const emails = Array.from(emailInputs).map(i => i.value);
+                        try {
+                        const resp = await fetch('/payment/check-attendees', {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ attendee_emails: emails })
+                            });
+                            const res = await resp.json();
+                            if (res && Array.isArray(res.missing) && res.missing.length > 0) {
+                                const proceed = confirm('Beberapa email belum memiliki akun:\n' + res.missing.join('\n') + '\n\nAkun attendee akan dibuat otomatis dan dikirim password. Lanjutkan?');
+                                if (!proceed) return;
+                            }
+                        } catch (err) {
+                            console.warn('Check attendees failed', err);
                         }
 
                         showModal();
@@ -508,17 +560,18 @@
                     const formData = new FormData();
                     formData.append('event_id', eventId);
                     formData.append('ticket_id', document.querySelector('input[name="ticket_id"]:checked').value);
-                    formData.append('quantity', '1');
+                    const qty = quantitySelect.value;
+                    formData.append('quantity', qty);
 
-                    const attendeeEmail = document.getElementById('attendee_email').value;
-                    formData.append('attendee_emails[]', attendeeEmail);
+                    const emailInputs = document.querySelectorAll('input[name="attendee_emails[]"]');
+                    emailInputs.forEach(inp => formData.append('attendee_emails[]', inp.value));
 
                     // Show loading state
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Processing...';
 
                     try {
-                        const response = await fetch('{{ route("payment.create-va") }}', {
+                        const response = await fetch('/payment/create-va', {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -606,7 +659,7 @@
                         pollCount++;
 
                         try {
-                            const response = await fetch(`{{ url('/payment/check-status') }}/${vaNumber}`);
+                            const response = await fetch(`/payment/check-status/${vaNumber}`);
                             const data = await response.json();
 
                             if (data.status === 'success' && data.data) {

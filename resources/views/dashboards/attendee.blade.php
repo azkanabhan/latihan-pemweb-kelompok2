@@ -3,12 +3,14 @@
     
     <!-- My Tickets Section -->
     @php
-        $myTickets = \App\Models\Payment::with(['event'])
-            ->where('user_id', auth()->id())
-            ->whereIn('status', ['active', 'used'])
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
+        $attendee = \App\Models\Attendee::where('user_id', auth()->id())->first();
+        $myTickets = $attendee
+            ? \App\Models\TicketHolder::with(['event'])
+                ->where('attendee_id', $attendee->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(3)
+                ->get()
+            : collect();
     @endphp
 
     @if($myTickets->count() > 0)
@@ -33,7 +35,6 @@
                                                 · {{ \Carbon\Carbon::parse($ticket->event->event_date)->format('d M Y') ?? 'TBA' }}
                                 </p>
                                 <div class="flex items-center text-sm text-gray-600">
-                                    <span class="mr-4">Quantity: {{ $ticket->quantity }}</span>
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full
                                         {{ $ticket->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
                                         {{ ucfirst($ticket->status) }}
@@ -41,7 +42,7 @@
                                 </div>
                             </div>
                             @if($ticket->qr_code)
-                                <a href="{{ route('tickets.qrcode', $ticket->payment_id) }}" 
+                                <a href="{{ route('tickets.qrcode', $ticket->ticket_holder_id) }}" 
                                    class="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium">
                                     View QR
                                 </a>

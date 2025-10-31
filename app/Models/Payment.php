@@ -12,15 +12,14 @@ class Payment extends Model
     protected $primaryKey = 'payment_id';
 
     protected $fillable = [
-        'attendee_id',
         'event_id',
-        'user_id',
         'ticket_id',
+        'attendee_id',
+        'user_id',
         'quantity',
         'method',
         'amount',
         'payment_date',
-        'qr_code',
         'status',
         'external_id',
         'va_number',
