@@ -44,7 +44,13 @@
                                         <td class="px-4 py-2">{{ $event->event_date }}</td>
                                         <td class="px-4 py-2">{{ $event->event_location }}</td>
                                         <td class="px-4 py-2">{{ number_format($event->event_capacity) }}</td>
-                                        <td class="px-4 py-2">{{ optional($event->creator->user)->name ?? '-' }}</td>
+                                        <td class="px-4 py-2">
+                                            @if($event->creator && $event->creator->user)
+                                                {{ $event->creator->user->name }}
+                                            @else
+                                                <span class="text-red-600 italic">Creator tidak ditemukan</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-2 text-right whitespace-nowrap">
                                             @if(($tab ?? 'requested')==='requested')
                                                 <form action="{{ route('admin.events.approve', $event) }}" method="POST" class="inline">

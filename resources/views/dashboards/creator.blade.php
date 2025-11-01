@@ -26,7 +26,7 @@
 
                 <div class="mt-3 text-sm text-gray-700">
                     <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
-                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }} (Terisi: {{ $ev->ticket_holders_count ?? 0 }})</p>
                     <p class="mt-2 text-gray-500">Menunggu persetujuan admin...</p>
                 </div>
             </div>
@@ -59,14 +59,14 @@
 
                 <div class="mt-3 text-sm text-gray-700">
                     <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
-                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }} (Terisi: {{ $ev->ticket_holders_count ?? 0 }})</p>
                     @if($ev->approved_at)
                     <p class="text-green-700 mt-2">✓ Disetujui: {{ $ev->approved_at->format('Y-m-d H:i') }}</p>
                     @endif
                     
-                    <a href="{{ route('creator.events.participants', ['id' => $ev->event_id]) }}"
+                    <a href="{{ route('creator.events.detail', ['id' => $ev->event_id]) }}"
                     class="inline-block mt-3 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Lihat Peserta
+                    Lihat Detail
                     </a>
                 </div>
             </div>
@@ -99,7 +99,7 @@
 
                 <div class="mt-3 text-sm text-gray-700">
                     <p>{{ \Illuminate\Support\Str::limit($ev->event_description, 200) }}</p>
-                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }}</p>
+                    <p class="mt-2">Kapasitas: {{ $ev->event_capacity }} (Terisi: {{ $ev->ticket_holders_count ?? 0 }})</p>
                     @if($ev->rejected_at)
                     <p class="text-red-700 mt-2">✗ Ditolak: {{ $ev->rejected_at->format('Y-m-d H:i') }}</p>
                     @endif
@@ -137,57 +137,275 @@
 </button>
 
 <!-- Modal (hidden by default) -->
-<div id="eventModal" class="hidden fixed inset-0 z-50 items-center justify-center">
-    <div class="absolute inset-0 bg-black/50" id="eventModalOverlay"></div>
+<div id="eventModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" id="eventModalOverlay"></div>
 
-    <div class="relative bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 p-6 z-10">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">Tambah Event</h3>
-            <button type="button" id="closeEventModal" class="text-gray-500 hover:text-gray-700">&times;</button>
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col z-10 overflow-hidden transform transition-all scale-95 opacity-0">
+        <!-- Header dengan gradient -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 flex items-center justify-between rounded-t-2xl">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white">Tambah Event Baru</h3>
+            </div>
+            <button type="button" id="closeEventModal" class="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <form method="POST" action="{{ route('creator.events.store') }}" class="space-y-3">
-            @csrf
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+            <form method="POST" action="{{ route('creator.events.store') }}" id="eventForm" class="p-6 space-y-5">
+                @csrf
 
-            <div>
-                <label class="block text-sm font-medium">Nama Event</label>
-                <input type="text" name="event_name" value="{{ old('event_name') }}" class="mt-1 block w-full border rounded p-2" />
-                @error('event_name') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
-            </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <span class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            Nama Event
+                        </span>
+                    </label>
+                    <input type="text" name="event_name" value="{{ old('event_name') }}" 
+                           class="mt-1 block w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" 
+                           placeholder="Contoh: Konser Musik Jazz" />
+                    @error('event_name') <div class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ $message }}
+                    </div> @enderror
+                </div>
 
-            <div>
-                <label class="block text-sm font-medium">Deskripsi</label>
-                <textarea name="event_description" class="mt-1 block w-full border rounded p-2">{{ old('event_description') }}</textarea>
-                @error('event_description') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
-            </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <span class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                            </svg>
+                            Deskripsi
+                        </span>
+                    </label>
+                    <textarea name="event_description" rows="4"
+                              class="mt-1 block w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                              placeholder="Jelaskan tentang event Anda...">{{ old('event_description') }}</textarea>
+                    @error('event_description') <div class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ $message }}
+                    </div> @enderror
+                </div>
 
-            <div>
-                <label class="block text-sm font-medium">Lokasi</label>
-                <input type="text" name="event_location" value="{{ old('event_location') }}" class="mt-1 block w-full border rounded p-2" />
-                @error('event_location') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
-            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Lokasi
+                            </span>
+                        </label>
+                        <input type="text" name="event_location" value="{{ old('event_location') }}" 
+                               class="mt-1 block w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" 
+                               placeholder="Contoh: Jakarta Convention Center" />
+                        @error('event_location') <div class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ $message }}
+                        </div> @enderror
+                    </div>
 
-            <div>
-                <label class="block text-sm font-medium">Tanggal & Waktu</label>
-                <input type="datetime-local" name="event_date" value="{{ old('event_date') }}" class="mt-1 block w-full border rounded p-2" />
-                @error('event_date') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
-            </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Tanggal & Waktu
+                            </span>
+                        </label>
+                        <input type="datetime-local" name="event_date" value="{{ old('event_date') }}" 
+                               class="mt-1 block w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" />
+                        @error('event_date') <div class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ $message }}
+                        </div> @enderror
+                    </div>
+                </div>
 
-            <div>
-                <label class="block text-sm font-medium">Kapasitas</label>
-                <input type="number" name="event_capacity" value="{{ old('event_capacity', 1) }}" class="mt-1 block w-full border rounded p-2" min="1" />
-                @error('event_capacity') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
-            </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <span class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Kapasitas
+                        </span>
+                    </label>
+                    <input type="number" name="event_capacity" value="{{ old('event_capacity', 1) }}" 
+                           class="mt-1 block w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" 
+                           min="1" placeholder="100" />
+                    @error('event_capacity') <div class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ $message }}
+                    </div> @enderror
+                </div>
 
-            <div class="flex justify-end gap-2 mt-4">
-                <button type="button" id="cancelEventModal" class="px-4 py-2 border rounded">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Simpan</button>
-            </div>
-        </form>
+                {{-- Tiket Section --}}
+                <div class="border-2 border-indigo-100 rounded-xl p-4 bg-gradient-to-br from-indigo-50 to-purple-50">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-sm font-semibold text-gray-700">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                Tiket
+                            </span>
+                        </label>
+                        <button type="button" id="addTicketBtn" 
+                                class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Tambah Tiket
+                        </button>
+                    </div>
+                    <div id="ticketsContainer" class="space-y-3">
+                        @if(old('tickets') && count(old('tickets')) > 0)
+                            @foreach(old('tickets') as $index => $ticket)
+                                <div class="ticket-row border-2 border-white rounded-lg p-4 bg-white shadow-sm">
+                                    <div class="flex gap-3 items-start">
+                                        <div class="flex-1 space-y-3">
+                                            <div>
+                                                <input type="text" name="tickets[{{ $index }}][name]" 
+                                                       value="{{ $ticket['name'] ?? '' }}" 
+                                                       placeholder="Nama tiket (contoh: Regular, VIP)" 
+                                                       class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                                                @error("tickets.{$index}.name") <div class="text-red-600 text-xs mt-1">{{ $message }}</div> @enderror
+                                            </div>
+                                            <div>
+                                                <div class="relative">
+                                                    <span class="absolute left-3 top-2.5 text-gray-500 text-sm">Rp</span>
+                                                    <input type="number" name="tickets[{{ $index }}][price]" 
+                                                           value="{{ $ticket['price'] ?? '' }}" 
+                                                           placeholder="100000" 
+                                                           min="0" step="1000"
+                                                           class="w-full border-2 border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                                                </div>
+                                                @error("tickets.{$index}.price") <div class="text-red-600 text-xs mt-1">{{ $message }}</div> @enderror
+                                            </div>
+                                        </div>
+                                        @if($index > 0)
+                                            <button type="button" class="remove-ticket-btn flex-shrink-0 w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus tiket">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="ticket-row border-2 border-white rounded-lg p-4 bg-white shadow-sm">
+                                <div class="flex gap-3 items-start">
+                                    <div class="flex-1 space-y-3">
+                                        <div>
+                                            <input type="text" name="tickets[0][name]" 
+                                                   value="" 
+                                                   placeholder="Nama tiket (contoh: Regular, VIP)" 
+                                                   class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                                        </div>
+                                        <div>
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-2.5 text-gray-500 text-sm">Rp</span>
+                                                <input type="number" name="tickets[0][price]" 
+                                                       value="" 
+                                                       placeholder="100000" 
+                                                       min="0" step="1000"
+                                                       class="w-full border-2 border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                    @error('tickets') <div class="text-red-600 text-sm mt-2 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ $message }}
+                    </div> @enderror
+                    <p class="text-xs text-gray-600 mt-3 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Minimal harus ada satu tiket. Anda bisa menambahkan beberapa tiket dengan harga berbeda.
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer dengan button -->
+        <div class="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl">
+            <button type="button" id="cancelEventModal" 
+                    class="px-5 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                Batal
+            </button>
+            <button type="submit" form="eventForm"
+                    class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
+                <span class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Simpan Event
+                </span>
+            </button>
+        </div>
     </div>
 </div>
 
 <div id="validationFlag" data-errors="{{ $errors->any() ? '1' : '0' }}" style="display:none"></div>
+
+<style>
+    /* Custom Scrollbar untuk Modal */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 4px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #4338ca 0%, #6d28d9 100%);
+    }
+    
+    /* Smooth scroll behavior */
+    .custom-scrollbar {
+        scroll-behavior: smooth;
+    }
+</style>
 
 <script>
     (function() {
@@ -201,12 +419,25 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             document.body.style.overflow = 'hidden';
+            // Trigger animation
+            setTimeout(() => {
+                modal.querySelector('.relative').style.transform = 'scale(1)';
+                modal.querySelector('.relative').style.opacity = '1';
+            }, 10);
         }
 
         function hide() {
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-            document.body.style.overflow = '';
+            const modalContent = modal.querySelector('.relative');
+            modalContent.style.transform = 'scale(0.95)';
+            modalContent.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+                // Reset transform for next show
+                modalContent.style.transform = '';
+                modalContent.style.opacity = '';
+            }, 150);
         }
 
         openBtn?.addEventListener('click', show);
@@ -223,5 +454,75 @@
         } catch (e) {
             /* noop */
         }
+    })();
+
+    // Ticket management
+    (function() {
+        const ticketsContainer = document.getElementById('ticketsContainer');
+        const addTicketBtn = document.getElementById('addTicketBtn');
+        // Start index from the number of existing tickets (0-based, so next will be count)
+        let ticketIndex = {{ old('tickets') ? count(old('tickets')) : 1 }};
+
+        function addTicketRow() {
+            const row = document.createElement('div');
+            row.className = 'ticket-row border-2 border-white rounded-lg p-4 bg-white shadow-sm';
+            row.innerHTML = `
+                <div class="flex gap-3 items-start">
+                    <div class="flex-1 space-y-3">
+                        <div>
+                            <input type="text" name="tickets[${ticketIndex}][name]" 
+                                   value="" 
+                                   placeholder="Nama tiket (contoh: Regular, VIP)" 
+                                   class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                        </div>
+                        <div>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-500 text-sm">Rp</span>
+                                <input type="number" name="tickets[${ticketIndex}][price]" 
+                                       value="" 
+                                       placeholder="100000" 
+                                       min="0" step="1000"
+                                       class="w-full border-2 border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="remove-ticket-btn flex-shrink-0 w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus tiket">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+            ticketsContainer.appendChild(row);
+            ticketIndex++;
+            
+            // Attach remove event to new button
+            row.querySelector('.remove-ticket-btn').addEventListener('click', function() {
+                const ticketRows = ticketsContainer.querySelectorAll('.ticket-row');
+                if (ticketRows.length > 1) {
+                    row.remove();
+                } else {
+                    alert('Minimal harus ada satu tiket.');
+                }
+            });
+        }
+
+        function removeTicketRow(btn) {
+            const ticketRows = ticketsContainer.querySelectorAll('.ticket-row');
+            if (ticketRows.length > 1) {
+                btn.closest('.ticket-row').remove();
+            } else {
+                alert('Minimal harus ada satu tiket.');
+            }
+        }
+
+        addTicketBtn?.addEventListener('click', addTicketRow);
+
+        // Attach remove events to existing buttons
+        document.querySelectorAll('.remove-ticket-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                removeTicketRow(this);
+            });
+        });
     })();
 </script>

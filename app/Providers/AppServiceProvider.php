@@ -50,18 +50,21 @@ class AppServiceProvider extends ServiceProvider
 
             if (! empty($ids)) {
                 $view->with('creator_events_requested', \App\Models\Event::with('creator')
+                    ->withCount('ticket_holders')
                     ->whereIn('events_creators_id', $ids)
                     ->requested()
                     ->orderBy('event_date', 'asc')
                     ->get());
                 
                 $view->with('creator_events_approved', \App\Models\Event::with('creator')
+                    ->withCount('ticket_holders')
                     ->whereIn('events_creators_id', $ids)
                     ->approved()
                     ->orderBy('event_date', 'asc')
                     ->get());
                 
                 $view->with('creator_events_rejected', \App\Models\Event::with('creator')
+                    ->withCount('ticket_holders')
                     ->whereIn('events_creators_id', $ids)
                     ->rejected()
                     ->orderBy('event_date', 'asc')

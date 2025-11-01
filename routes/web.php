@@ -35,7 +35,9 @@ Route::get('/dashboard', function () {
     $data = []; // Variabel untuk menampung data
 
     if ($user->role === 'admin') {
-        $events = App\Models\Event::with('creator.user')
+        $events = App\Models\Event::with(['creator.user' => function($query) {
+                $query->select('id', 'name', 'email');
+            }])
             ->requested()
             ->orderByDesc('event_date')
             ->limit(25)
@@ -48,18 +50,21 @@ Route::get('/dashboard', function () {
 
         // Pisahkan event berdasarkan status
         $data['creator_events_requested'] = App\Models\Event::with('creator')
+            ->withCount('ticket_holders')
             ->whereIn('events_creators_id', $idsForQuery)
             ->requested()
             ->orderBy('event_date', 'asc')
             ->get();
 
         $data['creator_events_approved'] = App\Models\Event::with('creator')
+            ->withCount('ticket_holders')
             ->whereIn('events_creators_id', $idsForQuery)
             ->approved()
             ->orderBy('event_date', 'asc')
             ->get();
 
         $data['creator_events_rejected'] = App\Models\Event::with('creator')
+            ->withCount('ticket_holders')
             ->whereIn('events_creators_id', $idsForQuery)
             ->rejected()
             ->orderBy('event_date', 'asc')
@@ -110,10 +115,10 @@ RouteFacade::middleware(['auth', 'role:creator'])->group(function () {
     // Creator: CRUD events owned by self
     Route::post('creator/events', [App\Http\Controllers\Creator\EventController::class, 'store'])->name('creator.events.store');
     Route::get(
-        'creator/events/{id}/participants',
+        'creator/events/{id}/detail',
         [App\Http\Controllers\Creator\EventController::class, 'showParticipants']
     )
-        ->name('creator.events.participants');
+        ->name('creator.events.detail');
 });
 
 // ALIAS AGAR ROUTE creator.dashboard TETAP BISA DIPAKAI DI VIEW

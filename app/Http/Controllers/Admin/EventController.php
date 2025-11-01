@@ -14,7 +14,9 @@ class EventController extends Controller
     public function index(Request $request): View
     {
         $tab = $request->string('tab')->toString() ?: 'requested';
-        $query = Event::with('creator.user');
+        $query = Event::with(['creator.user' => function($query) {
+            $query->select('id', 'name', 'email');
+        }]);
 
         if ($search = $request->string('q')->toString()) {
             $query->where(function ($q) use ($search) {
@@ -35,6 +37,12 @@ class EventController extends Controller
     }
 
     // create/store disabled for admin per new requirements
+
+    public function show(Event $event): View
+    {
+        $event->load(['creator.user', 'tickets', 'ticket_holders.attendee.user']);
+        return view('admin.events.show', compact('event'));
+    }
 
     public function edit(Event $event): View
     {
@@ -66,14 +74,36 @@ class EventController extends Controller
 
     public function approve(Event $event): RedirectResponse
     {
-        $event->approve();
-        return back()->with('status', 'Event approved');
+        try {
+            $result = $event->approve();
+            if ($result) {
+                // Refresh event untuk mendapatkan data terbaru
+                $event->refresh();
+                return redirect()->route('admin.events.show', $event)
+                    ->with('status', 'Event berhasil disetujui!');
+            } else {
+                return back()->withErrors(['error' => 'Gagal menyimpan perubahan.']);
+            }
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
+        }
     }
 
     public function reject(Event $event): RedirectResponse
     {
-        $event->reject();
-        return back()->with('status', 'Event rejected');
+        try {
+            $result = $event->reject();
+            if ($result) {
+                // Refresh event untuk mendapatkan data terbaru
+                $event->refresh();
+                return redirect()->route('admin.events.show', $event)
+                    ->with('status', 'Event berhasil ditolak!');
+            } else {
+                return back()->withErrors(['error' => 'Gagal menyimpan perubahan.']);
+            }
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
+        }
     }
 }
 

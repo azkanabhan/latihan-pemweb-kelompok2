@@ -40,7 +40,7 @@ class Event extends Model
     // Relasi ke pembuat event
     public function creator()
     {
-        return $this->belongsTo(EventCreator::class, 'events_creators_id', 'user_id');
+        return $this->belongsTo(EventCreator::class, 'events_creators_id', 'id');
     }
 
     // Relasi ke tiket
@@ -83,21 +83,27 @@ class Event extends Model
         return $query->where('status', 'rejected');
     }
 
+    // Route model binding key
+    public function getRouteKeyName()
+    {
+        return 'event_id';
+    }
+
     // Metode approve/reject
-    public function approve(): void
+    public function approve(): bool
     {
         $this->status = 'approved';
         $this->approved_at = now();
         $this->rejected_at = null;
-        $this->save();
+        return $this->save();
     }
 
-    public function reject(): void
+    public function reject(): bool
     {
         $this->status = 'rejected';
         $this->rejected_at = now();
         $this->approved_at = null;
-        $this->save();
+        return $this->save();
     }
 
     // 🔥 Relasi Many-to-Many ke Attendee
