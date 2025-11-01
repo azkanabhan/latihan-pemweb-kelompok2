@@ -33,4 +33,34 @@ class EventCreator extends Model
     {
         return $this->hasMany(Attendee::class);
     }
+
+    // Query Methods - semua query dipindahkan ke sini
+
+    /**
+     * Get EventCreator by user_id
+     * Used to find creator by user ID
+     */
+    public static function getByUserId($userId)
+    {
+        return self::where('user_id', $userId)->first();
+    }
+
+    /**
+     * Get EventCreator IDs by user_id
+     * Used to get creator IDs for querying events
+     */
+    public static function getCreatorIdsByUserId($userId)
+    {
+        $creator = self::getByUserId($userId);
+        return $creator ? [$creator->id] : [];
+    }
+
+    /**
+     * Get all creators with user info for admin edit
+     * Used in admin event edit page
+     */
+    public static function getAllCreatorsWithUser()
+    {
+        return self::with('user:id,name,email')->orderBy('id')->get(['id', 'user_id']);
+    }
 }

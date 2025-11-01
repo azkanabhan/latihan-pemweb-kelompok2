@@ -14,24 +14,9 @@ class EventController extends Controller
     public function index(Request $request): View
     {
         $tab = $request->string('tab')->toString() ?: 'requested';
-        $query = Event::with(['creator.user' => function($query) {
-            $query->select('id', 'name', 'email');
-        }]);
+        $search = $request->string('q')->toString() ?: null;
 
-        if ($search = $request->string('q')->toString()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('event_name', 'like', "%{$search}%")
-                  ->orWhere('event_location', 'like', "%{$search}%");
-            });
-        }
-
-        if ($tab === 'approved') {
-            $query->approved();
-        } else {
-            $query->requested();
-        }
-
-        $events = $query->orderByDesc('event_date')->paginate(10)->withQueryString();
+        $events = Event::getEventsWithFilters($tab, $search, 10);
 
         return view('admin.events.index', compact('events', 'tab'));
     }
@@ -40,13 +25,13 @@ class EventController extends Controller
 
     public function show(Event $event): View
     {
-        $event->load(['creator.user', 'tickets', 'ticket_holders.attendee.user']);
+        $event = Event::getEventForAdmin($event->event_id);
         return view('admin.events.show', compact('event'));
     }
 
     public function edit(Event $event): View
     {
-        $creators = EventCreator::with('user:id,name,email')->orderBy('id')->get(['id', 'user_id']);
+        $creators = EventCreator::getAllCreatorsWithUser();
         return view('admin.events.edit', compact('event', 'creators'));
     }
 

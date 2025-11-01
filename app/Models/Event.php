@@ -138,4 +138,131 @@ class Event extends Model
 
         return ($capacity > $booked) ? 'open' : 'closed';
     }
+
+    // Query Methods - semua query dipindahkan ke sini
+    
+    /**
+     * Get approved events that are upcoming (event_date >= today)
+     * Used for welcome page
+     */
+    public static function getApprovedUpcomingEvents()
+    {
+        return self::with(['tickets', 'payments'])
+            ->approved()
+            ->whereDate('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date', 'asc')
+            ->get();
+    }
+
+    /**
+     * Get requested events for admin dashboard
+     * Used in admin dashboard
+     */
+    public static function getRequestedEventsForAdmin($limit = 25)
+    {
+        return self::with(['creator.user' => function($query) {
+                $query->select('id', 'name', 'email');
+            }])
+            ->requested()
+            ->orderByDesc('event_date')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get events by creator IDs with ticket holders count
+     * Used in creator dashboard
+     */
+    public static function getEventsByCreatorIds(array $creatorIds, string $status = 'requested')
+    {
+        $query = self::with('creator')
+            ->withCount('ticket_holders')
+            ->whereIn('events_creators_id', $creatorIds);
+
+        // Apply status scope
+        if ($status === 'requested') {
+            $query->requested();
+        } elseif ($status === 'approved') {
+            $query->approved();
+        } elseif ($status === 'rejected') {
+            $query->rejected();
+        }
+
+        return $query->orderBy('event_date', 'asc')->get();
+    }
+
+    /**
+     * Get events with filters for admin events index
+     * Used in admin events management page
+     */
+    public static function getEventsWithFilters(string $tab = 'requested', ?string $search = null, int $perPage = 10)
+    {
+        $query = self::with(['creator.user' => function($query) {
+            $query->select('id', 'name', 'email');
+        }]);
+
+        // Apply search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('event_name', 'like', "%{$search}%")
+                  ->orWhere('event_location', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply status filter
+        if ($tab === 'approved') {
+            $query->approved();
+        } else {
+            $query->requested();
+        }
+
+        return $query->orderByDesc('event_date')->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Get event with full relations for detail page
+     * Used in event detail/show pages
+     */
+    public static function getEventWithFullRelations($eventId)
+    {
+        return self::with(['tickets', 'ticket_holders.attendee.user'])
+            ->findOrFail($eventId);
+    }
+
+    /**
+     * Get event with admin relations
+     * Used in admin event detail page
+     */
+    public static function getEventForAdmin($eventId)
+    {
+        return self::with(['creator.user', 'tickets', 'ticket_holders.attendee.user'])
+            ->findOrFail($eventId);
+    }
+
+    /**
+     * Get paginated ticket holders for event detail
+     * Used in creator event detail page
+     */
+    public function getPaginatedTicketHolders($perPage = 10)
+    {
+        // Validate and normalize perPage
+        if ($perPage === 'all') {
+            $totalCount = $this->ticket_holders()->count();
+            $perPage = $totalCount > 0 ? $totalCount : 10;
+        } else {
+            $perPage = (int) $perPage;
+            if (!in_array($perPage, [10, 20, 50])) {
+                $perPage = 10;
+            }
+        }
+
+        $ticketHolders = $this->ticket_holders()
+            ->with(['attendee.user'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        $ticketHolders->appends(request()->query());
+
+        return $ticketHolders;
+    }
 }

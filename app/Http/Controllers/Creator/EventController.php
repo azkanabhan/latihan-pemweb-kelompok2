@@ -63,31 +63,10 @@ class EventController extends Controller
   }
   public function showParticipants($eventId)
   {
-      $event = Event::with(['tickets', 'ticket_holders.attendee.user'])
-          ->findOrFail($eventId);
-      
-      // Get pagination per page from request
+      $event = Event::getEventWithFullRelations($eventId);
       $perPage = request()->get('per_page', 10);
       
-      // Handle "all" option
-      if ($perPage === 'all') {
-          $totalCount = $event->ticket_holders()->count();
-          $perPage = $totalCount > 0 ? $totalCount : 10;
-      } else {
-          $perPage = (int) $perPage;
-          if (!in_array($perPage, [10, 20, 50])) {
-              $perPage = 10;
-          }
-      }
-      
-      // Get paginated ticket holders
-      $ticketHolders = $event->ticket_holders()
-          ->with(['attendee.user'])
-          ->orderBy('created_at', 'desc')
-          ->paginate($perPage);
-      
-      // Append per_page parameter to pagination links
-      $ticketHolders->appends(request()->query());
+      $ticketHolders = $event->getPaginatedTicketHolders($perPage);
       
       return view('creator.detail', compact('event', 'ticketHolders'));
   }

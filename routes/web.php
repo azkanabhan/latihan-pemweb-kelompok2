@@ -4,18 +4,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    $events = App\Models\Event::with(['tickets', 'payments'])
-        ->approved()
-        ->whereDate('event_date', '>=', now()->toDateString())
-        ->orderBy('event_date', 'asc')
-        ->get();
-
-    return view('welcome', compact('events'));
-})->name('events.index');
+Route::get('/', [EventController::class, 'index'])->name('events.index');
 
 // Public event details
 Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
@@ -30,53 +23,9 @@ Route::post('/webhook/payment', [App\Http\Controllers\WebhookController::class, 
     ->name('webhook.payment')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
-Route::get('/dashboard', function () {
-    $user = auth()->user();
-    $data = []; // Variabel untuk menampung data
-
-    if ($user->role === 'admin') {
-        $events = App\Models\Event::with(['creator.user' => function($query) {
-                $query->select('id', 'name', 'email');
-            }])
-            ->requested()
-            ->orderByDesc('event_date')
-            ->limit(25)
-            ->get();
-        $data['admin_requested_events'] = $events;
-    } else if ($user->role === 'creator') {
-        $creator = App\Models\EventCreator::where('user_id', $user->id)->first();
-        $creatorIds = $creator ? [$creator->id] : [];
-        $idsForQuery = $creatorIds;
-
-        // Pisahkan event berdasarkan status
-        $data['creator_events_requested'] = App\Models\Event::with('creator')
-            ->withCount('ticket_holders')
-            ->whereIn('events_creators_id', $idsForQuery)
-            ->requested()
-            ->orderBy('event_date', 'asc')
-            ->get();
-
-        $data['creator_events_approved'] = App\Models\Event::with('creator')
-            ->withCount('ticket_holders')
-            ->whereIn('events_creators_id', $idsForQuery)
-            ->approved()
-            ->orderBy('event_date', 'asc')
-            ->get();
-
-        $data['creator_events_rejected'] = App\Models\Event::with('creator')
-            ->withCount('ticket_holders')
-            ->whereIn('events_creators_id', $idsForQuery)
-            ->rejected()
-            ->orderBy('event_date', 'asc')
-            ->get();
-    } else if ($user->role === 'attendee') {
-        // Nanti Anda bisa tambahkan kueri untuk attendee di sini
-        // $data['joined_events'] = ...
-    }
-
-    // Kirim view DENGAN DATA yang sesuai
-    return view('dashboard', $data);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 
 Route::middleware('auth')->group(function () {
