@@ -17,6 +17,9 @@ Route::get('/events/{event}', [EventController::class, 'show'])->name('events.sh
 Route::post('/payment/create-va', [PaymentController::class, 'createVa'])->name('payment.create-va');
 Route::post('/payment/check-attendees', [PaymentController::class, 'checkAttendees'])->name('payment.check-attendees');
 Route::get('/payment/check-status/{vaNumber}', [PaymentController::class, 'checkStatus'])->name('payment.check-status');
+Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+Route::get('/payment/success/{externalId?}', [PaymentController::class, 'showSuccess'])->name('payment.success');
 
 // Webhook route (no CSRF protection needed - excluded in middleware)
 Route::post('/webhook/payment', [App\Http\Controllers\WebhookController::class, 'handle'])

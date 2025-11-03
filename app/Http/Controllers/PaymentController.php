@@ -60,6 +60,7 @@ class PaymentController extends Controller
             'amount' => $totalAmount,
             'customer_name' => $customerName,
             'customer_email' => $customerEmail,
+            'callback_url' => url(route('payment.callback')),
             'description' => "Payment for {$event->event_name} - {$ticket->name} (Qty: {$validated['quantity']})",
             'expired_duration' => 24, // 24 hours
             'metadata' => [
@@ -212,7 +213,7 @@ class PaymentController extends Controller
                             $payment->save();
 
                             // Retrieve cached attendee emails; fallback to buyer only if cache missing
-                            $meta = Cache::get('payment_meta_va:' . $vaNumber) ?? Cache::get('payment_meta:' . ($payment->external_id ?? '')); 
+                            $meta = Cache::get('payment_meta_va:' . $vaNumber) ?? Cache::get('payment_meta:' . ($payment->external_id ?? ''));
                             $emails = is_array($meta['attendee_emails'] ?? null) ? $meta['attendee_emails'] : [];
                             if (empty($emails) && $payment->user_id) {
                                 $buyer = User::find($payment->user_id);
@@ -292,6 +293,145 @@ class PaymentController extends Controller
                 'message' => 'An error occurred while checking status'
             ], 500);
         }
+    }
+
+    /**
+     * Handle payment callback from gateway
+     */
+    public function callback(Request $request)
+    {
+        try {
+            // Get external_id from request (usually sent as query parameter or in request body)
+            $externalId = $request->input('external_id') ?? $request->query('external_id');
+            
+            if (!$externalId) {
+                \Log::error('Payment callback: No external_id provided', [
+                    'request_data' => $request->all()
+                ]);
+                return redirect()->route('events.index')->with('error', 'Invalid payment callback');
+            }
+
+            // Find payment by external_id
+            $payment = Payment::where('external_id', $externalId)->first();
+            
+            if (!$payment) {
+                \Log::error('Payment callback: Payment not found', [
+                    'external_id' => $externalId
+                ]);
+                return redirect()->route('events.index')->with('error', 'Payment not found');
+            }
+
+            // Check payment status from gateway
+            $apiUrl = 'https://payment-dummy.doovera.com/api/v1/virtual-account/' . $payment->va_number . '/status';
+            $apiKey = '4zww8RNj9koxcwUigghYeYaWCCZGqaYf';
+
+            $response = Http::withOptions([
+                'verify' => false
+            ])->withHeaders([
+                'X-API-Key' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->get($apiUrl);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                $gatewayStatus = $responseData['data']['status'] ?? 'unknown';
+
+                // Update payment status if changed
+                if ($gatewayStatus === 'paid' && $payment->status !== 'paid') {
+                    $payment->status = 'paid';
+                    $payment->payment_date = now();
+                    $payment->save();
+
+                    // Create ticket holders if not already created
+                    $meta = Cache::get('payment_meta:' . $externalId) ?? Cache::get('payment_meta_va:' . ($payment->va_number ?? ''));
+                    $emails = is_array($meta['attendee_emails'] ?? null) ? $meta['attendee_emails'] : [];
+                    
+                    if (empty($emails) && $payment->user_id) {
+                        $buyer = User::find($payment->user_id);
+                        if ($buyer) {
+                            $emails = array_fill(0, max(1, (int) $payment->quantity), $buyer->email);
+                        }
+                    }
+
+                    $existingCount = TicketHolder::where('qr_code', 'like', 'QR-' . $payment->payment_id . '-%')->count();
+                    if ($existingCount === 0 && !empty($emails)) {
+                        foreach ($emails as $email) {
+                            $user = User::where('email', $email)->first();
+                            $generatedPassword = null;
+                            if (!$user) {
+                                $generatedPassword = Str::random(10);
+                                $user = User::create([
+                                    'name' => explode('@', $email)[0],
+                                    'username' => explode('@', $email)[0] . '_' . Str::lower(Str::random(4)),
+                                    'email' => $email,
+                                    'password' => bcrypt($generatedPassword),
+                                    'role' => 'attendee',
+                                ]);
+                                try {
+                                    Mail::to($email)->send(new \App\Mail\AttendeeAccountCreated($user, $generatedPassword));
+                                } catch (\Throwable $e) {
+                                    \Log::error('Failed to send attendee account email', ['email' => $email, 'error' => $e->getMessage()]);
+                                }
+                            }
+                            $attendee = Attendee::firstOrCreate(['user_id' => $user->id]);
+                            TicketHolder::create([
+                                'attendee_id' => $attendee->id,
+                                'event_id' => $payment->event_id,
+                                'qr_code' => $this->generateQrCode($payment),
+                                'status' => 'active',
+                            ]);
+                        }
+                    }
+
+                    \Log::info('Payment processed via callback', [
+                        'payment_id' => $payment->payment_id,
+                        'external_id' => $externalId
+                    ]);
+                }
+
+                // Redirect to success page with payment info
+                return redirect()->route('payment.success', ['external_id' => $externalId]);
+            }
+
+            // If status check fails, still redirect but with warning
+            return redirect()->route('payment.success', ['external_id' => $externalId]);
+
+        } catch (\Exception $e) {
+            \Log::error('Payment callback error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('events.index')->with('error', 'Terjadi kesalahan saat memproses callback pembayaran');
+        }
+    }
+
+    /**
+     * Show payment success page
+     */
+    public function showSuccess(Request $request, $externalId = null)
+    {
+        // Get external_id from route parameter or query
+        $externalId = $externalId ?? $request->query('external_id');
+        
+        if (!$externalId) {
+            return redirect()->route('events.index')->with('error', 'Invalid payment reference');
+        }
+
+        $payment = Payment::where('external_id', $externalId)->with(['event', 'ticket'])->first();
+        
+        if (!$payment) {
+            return redirect()->route('events.index')->with('error', 'Payment not found');
+        }
+
+        // Load event and ticket data
+        $event = $payment->event;
+        $ticket = $payment->ticket;
+
+        return view('payment.success', [
+            'payment' => $payment,
+            'event' => $event,
+            'ticket' => $ticket,
+        ]);
     }
 
     /**

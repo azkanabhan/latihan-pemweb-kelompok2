@@ -414,6 +414,7 @@
 
                 const eventId = {{ $event->event_id }};
                 let paymentUrl = '';
+                let paymentExternalId = '';
 
                 // Populate quantity options (1..5 default)
                 for (let i = 1; i <= 5; i++) {
@@ -585,8 +586,9 @@
                             // Hide confirmation modal
                             modal.classList.add('hidden');
 
-                            // Save payment URL
+                            // Save payment URL and external_id
                             paymentUrl = data.data.payment_url;
+                            paymentExternalId = data.data.external_id;
 
                             // Populate VA modal
                             vaNumber.textContent = data.data.va_number;
@@ -672,15 +674,20 @@
                                     // Payment successful
                                     clearInterval(pollInterval);
 
-                                    // Show success message
-                                    alert('Payment successful! Your ticket is now active.');
-
-                                    // Close modal and redirect to dashboard or reload
+                                    // Close modal and redirect to payment success page
                                     vaModal.classList.add('hidden');
-                                    if (isLoggedIn) {
-                                        window.location.href = '{{ route("dashboard") }}';
+                                    
+                                    // Redirect current tab to payment success page
+                                    // (payment success page will handle opening home in new tab)
+                                    if (paymentExternalId) {
+                                        window.location.href = '{{ url("/payment/success") }}/' + paymentExternalId;
                                     } else {
-                                        window.location.href = '/';
+                                        // Fallback: redirect based on login status
+                                        if (isLoggedIn) {
+                                            window.location.href = '{{ route("dashboard") }}';
+                                        } else {
+                                            window.location.href = '/';
+                                        }
                                     }
                                 } else if (gatewayStatus === 'expired' || gatewayStatus === 'cancelled') {
                                     // Payment expired or cancelled
