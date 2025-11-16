@@ -13,7 +13,8 @@ class EventController extends Controller
      */
     public function index(): View
     {
-        $events = Event::getApprovedUpcomingEvents();
+        // Ambil event yang sudah disetujui dan yang akan datang (berdasarkan start_date)
+        $events = Event::getApprovedUpcomingEvents(); // Pastikan ini sudah mencakup start_date dan end_date
         return view('welcome', compact('events'));
     }
 
@@ -22,10 +23,11 @@ class EventController extends Controller
      */
     public function show($eventId): View
     {
+        // Ambil detail event berdasarkan eventId, dengan relasi yang lengkap
         $event = Event::with(['tickets', 'payments', 'creator.user', 'reviews'])
             ->findOrFail($eventId);
-        
+
+        // Pastikan start_date dan end_date ter-handle dengan benar di model (seperti yang sudah dibahas)
         return view('events.show', compact('event'));
     }
 }
-

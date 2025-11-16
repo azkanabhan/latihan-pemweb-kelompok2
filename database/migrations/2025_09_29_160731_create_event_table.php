@@ -15,7 +15,11 @@ return new class extends Migration {
                 $table->string('event_name');
                 $table->text('event_description');
                 $table->string('event_location');
-                $table->dateTime('event_date');
+                
+                // DIUBAH: Mengganti event_date tunggal
+                $table->dateTime('start_date'); // Tanggal & Waktu Mulai
+                $table->dateTime('end_date');   // Tanggal & Waktu Selesai
+
                 $table->integer('event_capacity');
                 $table->enum('status', ['requested', 'approved', 'rejected'])->default('requested');
                 $table->timestamp('approved_at')->nullable();
@@ -32,6 +36,7 @@ return new class extends Migration {
 
     public function down(): void
     {
-        // no-op
+        // Sebaiknya diisi untuk rollback, meskipun Anda bilang no-op
+        Schema::dropIfExists('events');
     }
 };

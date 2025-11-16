@@ -20,7 +20,8 @@ class Event extends Model
         'event_name',
         'event_description',
         'event_location',
-        'event_date',
+        'start_date',
+        'end_date',
         'event_capacity',
         'events_creators_id',
         'status',
@@ -29,7 +30,8 @@ class Event extends Model
     ];
 
     protected $casts = [
-        'event_date' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
     ];
@@ -140,7 +142,7 @@ class Event extends Model
     }
 
     // Query Methods - semua query dipindahkan ke sini
-    
+
     /**
      * Get approved events that are upcoming (event_date >= today)
      * Used for welcome page
@@ -149,8 +151,8 @@ class Event extends Model
     {
         return self::with(['tickets', 'payments'])
             ->approved()
-            ->whereDate('event_date', '>=', now()->toDateString())
-            ->orderBy('event_date', 'asc')
+            ->whereDate('start_date', '>=', now()->toDateString())
+            ->orderBy('start_date', 'asc')
             ->get();
     }
 
@@ -160,11 +162,13 @@ class Event extends Model
      */
     public static function getRequestedEventsForAdmin($limit = 25)
     {
-        return self::with(['creator.user' => function($query) {
+        return self::with([
+            'creator.user' => function ($query) {
                 $query->select('id', 'name', 'email');
-            }])
+            }
+        ])
             ->requested()
-            ->orderByDesc('event_date')
+            ->orderByDesc('start_date', 'asc')
             ->limit($limit)
             ->get();
     }
@@ -188,7 +192,7 @@ class Event extends Model
             $query->rejected();
         }
 
-        return $query->orderBy('event_date', 'asc')->get();
+        return $query->orderBy('start_date', 'asc')->get();
     }
 
     /**
@@ -197,15 +201,17 @@ class Event extends Model
      */
     public static function getEventsWithFilters(string $tab = 'requested', ?string $search = null, int $perPage = 10)
     {
-        $query = self::with(['creator.user' => function($query) {
-            $query->select('id', 'name', 'email');
-        }]);
+        $query = self::with([
+            'creator.user' => function ($query) {
+                $query->select('id', 'name', 'email');
+            }
+        ]);
 
         // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('event_name', 'like', "%{$search}%")
-                  ->orWhere('event_location', 'like', "%{$search}%");
+                    ->orWhere('event_location', 'like', "%{$search}%");
             });
         }
 
@@ -216,7 +222,7 @@ class Event extends Model
             $query->requested();
         }
 
-        return $query->orderByDesc('event_date')->paginate($perPage)->withQueryString();
+        return $query->orderByDesc('start_date')->paginate($perPage)->withQueryString();
     }
 
     /**
