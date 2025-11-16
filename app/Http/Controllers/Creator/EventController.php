@@ -20,7 +20,8 @@ class EventController extends Controller
       'event_name' => 'required|string|max:255',
       'event_description' => 'required|string',
       'event_location' => 'required|string|max:255',
-      'event_date' => 'required|date',
+      'start_date' => 'required|date|after_or_equal:today',
+      'end_date' => 'required|date|after_or_equal:start_date',
       'event_capacity' => 'required|integer|min:1',
       'tickets' => 'required|array|min:1',
       'tickets.*.name' => 'required|string|max:255',
@@ -63,12 +64,12 @@ class EventController extends Controller
   }
   public function showParticipants($eventId)
   {
-      $event = Event::getEventWithFullRelations($eventId);
-      $perPage = request()->get('per_page', 10);
-      
-      $ticketHolders = $event->getPaginatedTicketHolders($perPage);
-      
-      return view('creator.detail', compact('event', 'ticketHolders'));
+    $event = Event::getEventWithFullRelations($eventId);
+    $perPage = request()->get('per_page', 10);
+
+    $ticketHolders = $event->getPaginatedTicketHolders($perPage);
+
+    return view('creator.detail', compact('event', 'ticketHolders'));
   }
 
 }
