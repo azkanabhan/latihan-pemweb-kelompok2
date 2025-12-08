@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />
 
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -219,35 +222,56 @@
             <div
                 class="group relative flex flex-col h-full bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
 
+                <!-- Image/Photo Area (Background + Photo Carousel) -->
                 <div class="relative h-56 overflow-hidden">
+                    <!-- Gradient Background (shown when no photos) -->
+                    @if(!($event->photos && $event->photos->count() > 0))
                     <div
                         class="absolute inset-0 bg-gradient-to-br {{ $randomGradient }} opacity-90 group-hover:scale-110 transition-transform duration-700 ease-out">
                     </div>
                     <div
                         class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]">
                     </div>
+                    @endif
 
-                    <div
-                        class="absolute top-4 left-4 bg-white/95 backdrop-blur-md shadow-lg rounded-2xl p-3 text-center min-w-[70px]">
-                        <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">
-                            {{ $event->start_date->format('M') }}
-                        </p>
-                        <p class="text-2xl font-bold text-gray-900 leading-none">{{ $event->start_date->format('d') }}
-                        </p>
+                    <!-- Photo Carousel (shown when photos exist) -->
+                    @if($event->photos && $event->photos->count() > 0)
+                    <div class="swiper event-carousel w-full h-full" data-event-id="{{ $event->event_id }}">
+                        <div class="swiper-wrapper">
+                            @foreach($event->photos as $photo)
+                            <div class="swiper-slide">
+                                <img src="{{ asset('storage/' . $photo->photo_path) }}"
+                                    alt="Event photo"
+                                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                            </div>
+                            @endforeach
+                        </div>
+                        <!-- Autoplay pagination -->
+                        <div class="swiper-pagination absolute bottom-3 left-0 right-0 flex justify-center gap-2"></div>
                     </div>
+                    @endif
+                </div>
 
-                    <div class="absolute top-4 right-4">
-                        @if($status === 'open')
-                        <span
-                            class="px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-green-700 shadow-sm flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Open
-                        </span>
-                        @else
-                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-red-600 shadow-sm">
-                            Sold Out
-                        </span>
-                        @endif
-                    </div>
+                <div
+                    class="absolute top-4 left-4 bg-white/95 backdrop-blur-md shadow-lg rounded-2xl p-3 text-center min-w-[70px]">
+                    <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">
+                        {{ $event->start_date->format('M') }}
+                    </p>
+                    <p class="text-2xl font-bold text-gray-900 leading-none">{{ $event->start_date->format('d') }}
+                    </p>
+                </div>
+
+                <div class="absolute top-4 right-4">
+                    @if($status === 'open')
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-green-700 shadow-sm flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Open
+                    </span>
+                    @else
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/90 text-red-600 shadow-sm">
+                        Sold Out
+                    </span>
+                    @endif
                 </div>
 
                 <div class="p-6 flex flex-col flex-grow bg-white">
@@ -271,7 +295,7 @@
                         </a>
                     </h3>
 
-                    <div class="mt-auto pt-4 flex items-end justify-between border-t border-gray-50 mt-4">
+                    <div class="mt-auto pt-4 flex items-end justify-between border-t border-gray-50">
                         <div>
                             <p class="text-xs text-gray-400 mb-1">Mulai dari</p>
                             <p class="text-lg font-bold text-purple-600">Rp
@@ -320,6 +344,29 @@
             </div>
         </div>
     </footer>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+        // Initialize all event carousels
+        document.querySelectorAll('.event-carousel').forEach(carouselEl => {
+            new Swiper(carouselEl, {
+                loop: true,
+                autoplay: {
+                    delay: 4000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: carouselEl.querySelector('.swiper-pagination'),
+                    clickable: true,
+                    bulletClass: 'w-2 h-2 rounded-full bg-white/60 cursor-pointer',
+                    bulletActiveClass: 'bg-white',
+                },
+                effect: 'slide',
+                speed: 800,
+            });
+        });
+    </script>
 
 </body>
 

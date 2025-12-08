@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventCreator;
+use App\Models\EventPhoto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
-use Spatie\GoogleCalendar\Event as GoogleCalendarEvent;
+use Illuminate\Support\Facades\Storage;
+// use Spatie\GoogleCalendar\Event as GoogleCalendarEvent; // Disabled: Package not installed
 
 class EventController extends Controller
 {
@@ -52,9 +54,8 @@ class EventController extends Controller
 
         $event->update($validated);
 
-        // 4. TAMBAHKAN LOGIKA UPDATE GOOGLE CALENDAR
-        // Jika event yang di-update statusnya "approved" DAN punya GCal ID,
-        // kita update juga di Google Calendar.
+        // Google Calendar sync disabled (package not installed)
+        /*
         if ($event->status === 'approved' && $event->google_calendar_event_id) {
             try {
                 $calendarEvent = GoogleCalendarEvent::find($event->google_calendar_event_id);
@@ -68,16 +69,17 @@ class EventController extends Controller
                 }
             } catch (\Exception $e) {
                 Log::error('Gagal update event GCal saat admin update: ' . $e->getMessage());
-                // Jangan gagalkan redirect, cukup log errornya
             }
         }
+        */
 
         return redirect()->route('admin.events.index')->with('status', 'Event updated');
     }
 
     public function destroy(Event $event): RedirectResponse
     {
-        // 5. TAMBAHKAN LOGIKA DELETE GOOGLE CALENDAR
+        // Google Calendar sync disabled (package not installed)
+        /*
         if ($event->google_calendar_event_id) {
             try {
                 $calendarEvent = GoogleCalendarEvent::find($event->google_calendar_event_id);
@@ -88,6 +90,7 @@ class EventController extends Controller
                 Log::error('Gagal menghapus event GCal saat destroy: ' . $e->getMessage());
             }
         }
+        */
 
         $event->delete();
         return redirect()->route('admin.events.index')->with('status', 'Event deleted');
@@ -99,10 +102,11 @@ class EventController extends Controller
             $result = $event->approve();
             if ($result) {
 
-                // 6. TAMBAHKAN LOGIKA CREATE/UPDATE GOOGLE CALENDAR
+                // Google Calendar sync disabled (package not installed)
+                // TODO: Install spatie/laravel-google-calendar if needed
+                /*
                 try {
                     if ($event->google_calendar_event_id) {
-                        // Event sudah ada, kita update
                         $calendarEvent = GoogleCalendarEvent::find($event->google_calendar_event_id);
                         $calendarEvent->name = $event->event_name;
                         $calendarEvent->description = $event->event_description;
@@ -111,7 +115,6 @@ class EventController extends Controller
                         $calendarEvent->location = $event->event_location;
                         $calendarEvent->save();
                     } else {
-                        // Event baru, kita buat
                         $calendarEvent = GoogleCalendarEvent::create([
                             'name' => $event->event_name,
                             'description' => $event->event_description,
@@ -119,20 +122,17 @@ class EventController extends Controller
                             'endDateTime' => $event->end_date,
                             'location' => $event->event_location,
                         ]);
-
-                        // Simpan Google Event ID ke database
                         $event->google_calendar_event_id = $calendarEvent->id;
                         $event->save();
                     }
                 } catch (\Exception $e) {
-                    // Log error tapi jangan gagalkan proses
                     Log::error('Gagal sinkronisasi Google Calendar saat approve: ' . $e->getMessage());
                 }
+                */
 
                 $event->refresh();
                 return redirect()->route('admin.events.show', $event)
-                    // Ubah pesannya sedikit
-                    ->with('status', 'Event berhasil disetujui dan disinkronkan ke Google Calendar!');
+                    ->with('status', 'Event berhasil disetujui!');
             } else {
                 return back()->withErrors(['error' => 'Gagal menyimpan perubahan.']);
             }
@@ -147,20 +147,21 @@ class EventController extends Controller
             $result = $event->reject();
             if ($result) {
 
-                // 7. TAMBAHKAN LOGIKA DELETE GOOGLE CALENDAR
+                // Google Calendar sync disabled (package not installed)
+                /*
                 if ($event->google_calendar_event_id) {
                     try {
                         $calendarEvent = GoogleCalendarEvent::find($event->google_calendar_event_id);
                         if ($calendarEvent) {
                             $calendarEvent->delete();
                         }
-                        // Hapus ID dari database
                         $event->google_calendar_event_id = null;
                         $event->save();
                     } catch (\Exception $e) {
                         Log::error('Gagal menghapus event GCal saat reject: ' . $e->getMessage());
                     }
                 }
+                */
 
                 $event->refresh();
                 return redirect()->route('admin.events.show', $event)
@@ -171,5 +172,62 @@ class EventController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
         }
+    }
+
+    public function editPhotos(Event $event): View
+    {
+        $event = Event::getEventForAdmin($event->event_id);
+        return view('admin.events.edit-photos', compact('event'));
+    }
+
+    public function updatePhotos(Request $request, Event $event): RedirectResponse
+    {
+        $validated = $request->validate([
+            'photos' => 'nullable|array',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'delete_photos' => 'nullable|array',
+            'delete_photos.*' => 'integer|exists:event_photos,id',
+        ], [
+            'photos.*.image' => 'File harus berupa gambar.',
+            'photos.*.mimes' => 'Format gambar harus JPEG, PNG, JPG, atau GIF.',
+            'photos.*.max' => 'Ukuran gambar maksimal 5MB.',
+        ]);
+
+        // Delete photos if requested
+        if (!empty($validated['delete_photos'])) {
+            foreach ($validated['delete_photos'] as $photoId) {
+                $photo = EventPhoto::find($photoId);
+                if ($photo && $photo->event_id === $event->event_id) {
+                    Storage::disk('public')->delete($photo->photo_path);
+                    $photo->delete();
+                }
+            }
+        }
+
+        // Add new photos if uploaded
+        if ($request->hasFile('photos')) {
+            $maxOrder = $event->photos()->max('order') ?? 0;
+            $order = $maxOrder + 1;
+
+            foreach ($request->file('photos') as $photo) {
+                $filename = 'event_' . $event->event_id . '_' . time() . '_' . $photo->hashName();
+                $path = $photo->storeAs(
+                    'events/' . $event->event_id,
+                    $filename,
+                    'public'
+                );
+
+                EventPhoto::create([
+                    'event_id' => $event->event_id,
+                    'photo_path' => $path,
+                    'order' => $order,
+                ]);
+
+                $order++;
+            }
+        }
+
+        return redirect()->route('admin.events.show', $event)
+            ->with('success', 'Foto event berhasil diperbarui.');
     }
 }

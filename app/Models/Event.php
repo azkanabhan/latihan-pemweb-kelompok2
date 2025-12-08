@@ -8,6 +8,8 @@ use App\Models\Attendee;
 use App\Models\EventCreator;
 use App\Models\Ticket;
 use App\Models\ReviewRating;
+use App\Models\EventDay;
+use App\Models\EventPhoto;
 
 class Event extends Model
 {
@@ -51,6 +53,11 @@ class Event extends Model
         return $this->hasMany(Ticket::class, 'event_id', 'event_id');
     }
 
+    public function days()
+    {
+        return $this->hasMany(EventDay::class, 'event_id', 'event_id')->orderBy('start_at');
+    }
+
     // Relasi ke pembayaran
     public function payments()
     {
@@ -67,6 +74,12 @@ class Event extends Model
     public function reviews()
     {
         return $this->hasMany(ReviewRating::class, 'event_id', 'event_id');
+    }
+
+    // Relasi ke foto event
+    public function photos()
+    {
+        return $this->hasMany(EventPhoto::class, 'event_id', 'event_id')->orderBy('order');
     }
 
     // Scope status event
@@ -126,10 +139,10 @@ class Event extends Model
     {
         // Consider payments with status 'active' or 'used' as confirmed bookings
         if ($this->relationLoaded('payments')) {
-            return $this->payments->whereIn('status', 'paid')->sum('quantity');
+            return $this->payments->whereIn('status', ['paid', 'active', 'used'])->sum('quantity');
         }
 
-        return $this->payments()->whereIn('status', 'paid')->sum('quantity');
+        return $this->payments()->whereIn('status', ['paid', 'active', 'used'])->sum('quantity');
     }
 
     // Accessor: availability status ('open' when there are seats left)
@@ -149,9 +162,9 @@ class Event extends Model
      */
     public static function getApprovedUpcomingEvents()
     {
-        return self::with(['tickets', 'payments'])
+        return self::with(['tickets', 'payments', 'days'])
             ->approved()
-            ->whereDate('start_date', '>=', now()->toDateString())
+            ->whereDate('end_date', '>=', now()->toDateString())
             ->orderBy('start_date', 'asc')
             ->get();
     }
@@ -168,7 +181,7 @@ class Event extends Model
             }
         ])
             ->requested()
-            ->orderByDesc('start_date', 'asc')
+            ->orderByDesc('start_date')
             ->limit($limit)
             ->get();
     }
@@ -231,7 +244,7 @@ class Event extends Model
      */
     public static function getEventWithFullRelations($eventId)
     {
-        return self::with(['tickets', 'ticket_holders.attendee.user'])
+        return self::with(['tickets', 'ticket_holders.attendee.user', 'days'])
             ->findOrFail($eventId);
     }
 

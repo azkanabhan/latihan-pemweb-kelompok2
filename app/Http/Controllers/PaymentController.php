@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
@@ -26,6 +27,7 @@ class PaymentController extends Controller
             'quantity' => 'required|integer|min:1',
             'attendee_emails' => 'required|array',
             'attendee_emails.*' => 'required|email',
+            'event_day_id' => 'nullable|exists:event_days,id',
         ]);
 
         if (count($validated['attendee_emails']) !== (int) $validated['quantity']) {
@@ -38,6 +40,28 @@ class PaymentController extends Controller
         // Get event and ticket info
         $event = Event::findOrFail($validated['event_id']);
         $ticket = Ticket::findOrFail($validated['ticket_id']);
+
+        // If event has multiple days, ensure selection is provided and matches the event
+        if ($event->days()->exists()) {
+            if (empty($validated['event_day_id'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Pilih hari event terlebih dahulu'
+                ], 422);
+            }
+
+            $day = \App\Models\EventDay::where('event_id', $event->event_id)
+                ->where('id', $validated['event_day_id'])
+                ->first();
+            if (! $day) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Hari event tidak valid'
+                ], 422);
+            }
+        } else {
+            $validated['event_day_id'] = null;
+        }
 
         // Get authenticated user or use first email
         $user = auth()->user();
@@ -100,6 +124,7 @@ class PaymentController extends Controller
                 $payment = new \App\Models\Payment();
                 $payment->attendee_id = $attendeeId; // Can be null if user not logged in
                 $payment->event_id = $event->event_id;
+                $payment->event_day_id = $validated['event_day_id'] ?? null;
                 $payment->user_id = $user ? $user->id : null;
                 $payment->ticket_id = $validated['ticket_id'];
                 $payment->quantity = $validated['quantity'];
@@ -119,6 +144,7 @@ class PaymentController extends Controller
                     'attendee_emails' => $validated['attendee_emails'],
                     'quantity' => (int) $validated['quantity'],
                     'event_id' => $event->event_id,
+                    'event_day_id' => $validated['event_day_id'] ?? null,
                     'ticket_id' => (int) $validated['ticket_id'],
                     'user_id' => $user ? $user->id : null,
                 ];
@@ -149,7 +175,7 @@ class PaymentController extends Controller
                 ], $response->status());
             }
         } catch (\Exception $e) {
-            \Log::error('Payment VA Error: ' . $e->getMessage(), [
+            Log::error('Payment VA Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -240,20 +266,21 @@ class PaymentController extends Controller
                                         try {
                                             Mail::to($email)->send(new \App\Mail\AttendeeAccountCreated($user, $generatedPassword));
                                         } catch (\Throwable $e) {
-                                            \Log::error('Failed to send attendee account email', ['email' => $email, 'error' => $e->getMessage()]);
+                                            Log::error('Failed to send attendee account email', ['email' => $email, 'error' => $e->getMessage()]);
                                         }
                                     }
                                     $attendee = Attendee::firstOrCreate(['user_id' => $user->id]);
                                     TicketHolder::create([
                                         'attendee_id' => $attendee->id,
                                         'event_id' => $payment->event_id,
+                                        'event_day_id' => $payment->event_day_id,
                                         'qr_code' => $this->generateQrCode($payment),
                                         'status' => 'active',
                                     ]);
                                 }
                             }
 
-                            \Log::info('Payment marked paid and ticket holders created via status check', [
+                            Log::info('Payment marked paid and ticket holders created via status check', [
                                 'payment_id' => $payment->payment_id,
                                 'va_number' => $vaNumber
                             ]);
@@ -282,9 +309,8 @@ class PaymentController extends Controller
                 'status' => 'error',
                 'message' => 'Failed to check status'
             ], $response->status());
-
         } catch (\Exception $e) {
-            \Log::error('Check VA status error: ' . $e->getMessage(), [
+            Log::error('Check VA status error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -303,9 +329,9 @@ class PaymentController extends Controller
         try {
             // Get external_id from request (usually sent as query parameter or in request body)
             $externalId = $request->input('external_id') ?? $request->query('external_id');
-            
+
             if (!$externalId) {
-                \Log::error('Payment callback: No external_id provided', [
+                Log::error('Payment callback: No external_id provided', [
                     'request_data' => $request->all()
                 ]);
                 return redirect()->route('events.index')->with('error', 'Invalid payment callback');
@@ -313,9 +339,9 @@ class PaymentController extends Controller
 
             // Find payment by external_id
             $payment = Payment::where('external_id', $externalId)->first();
-            
+
             if (!$payment) {
-                \Log::error('Payment callback: Payment not found', [
+                Log::error('Payment callback: Payment not found', [
                     'external_id' => $externalId
                 ]);
                 return redirect()->route('events.index')->with('error', 'Payment not found');
@@ -345,7 +371,7 @@ class PaymentController extends Controller
                     // Create ticket holders if not already created
                     $meta = Cache::get('payment_meta:' . $externalId) ?? Cache::get('payment_meta_va:' . ($payment->va_number ?? ''));
                     $emails = is_array($meta['attendee_emails'] ?? null) ? $meta['attendee_emails'] : [];
-                    
+
                     if (empty($emails) && $payment->user_id) {
                         $buyer = User::find($payment->user_id);
                         if ($buyer) {
@@ -370,20 +396,21 @@ class PaymentController extends Controller
                                 try {
                                     Mail::to($email)->send(new \App\Mail\AttendeeAccountCreated($user, $generatedPassword));
                                 } catch (\Throwable $e) {
-                                    \Log::error('Failed to send attendee account email', ['email' => $email, 'error' => $e->getMessage()]);
+                                    Log::error('Failed to send attendee account email', ['email' => $email, 'error' => $e->getMessage()]);
                                 }
                             }
                             $attendee = Attendee::firstOrCreate(['user_id' => $user->id]);
                             TicketHolder::create([
                                 'attendee_id' => $attendee->id,
                                 'event_id' => $payment->event_id,
+                                'event_day_id' => $payment->event_day_id,
                                 'qr_code' => $this->generateQrCode($payment),
                                 'status' => 'active',
                             ]);
                         }
                     }
 
-                    \Log::info('Payment processed via callback', [
+                    Log::info('Payment processed via callback', [
                         'payment_id' => $payment->payment_id,
                         'external_id' => $externalId
                     ]);
@@ -395,12 +422,11 @@ class PaymentController extends Controller
 
             // If status check fails, still redirect but with warning
             return redirect()->route('payment.success', ['external_id' => $externalId]);
-
         } catch (\Exception $e) {
-            \Log::error('Payment callback error: ' . $e->getMessage(), [
+            Log::error('Payment callback error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return redirect()->route('events.index')->with('error', 'Terjadi kesalahan saat memproses callback pembayaran');
         }
     }
@@ -412,13 +438,13 @@ class PaymentController extends Controller
     {
         // Get external_id from route parameter or query
         $externalId = $externalId ?? $request->query('external_id');
-        
+
         if (!$externalId) {
             return redirect()->route('events.index')->with('error', 'Invalid payment reference');
         }
 
         $payment = Payment::where('external_id', $externalId)->with(['event', 'ticket'])->first();
-        
+
         if (!$payment) {
             return redirect()->route('events.index')->with('error', 'Payment not found');
         }
@@ -443,4 +469,3 @@ class PaymentController extends Controller
         return "QR-{$payment->payment_id}-{$random}";
     }
 }
-

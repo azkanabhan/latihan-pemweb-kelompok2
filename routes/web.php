@@ -60,6 +60,8 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
     ]);
     Route::post('admin/events/{event}/approve', [App\Http\Controllers\Admin\EventController::class, 'approve'])->name('admin.events.approve');
     Route::post('admin/events/{event}/reject', [App\Http\Controllers\Admin\EventController::class, 'reject'])->name('admin.events.reject');
+    Route::get('admin/events/{event}/edit-photos', [App\Http\Controllers\Admin\EventController::class, 'editPhotos'])->name('admin.events.edit-photos');
+    Route::post('admin/events/{event}/update-photos', [App\Http\Controllers\Admin\EventController::class, 'updatePhotos'])->name('admin.events.update-photos');
 });
 
 // RUTE UNTUK CREATOR (SELAIN DASHBOARD)

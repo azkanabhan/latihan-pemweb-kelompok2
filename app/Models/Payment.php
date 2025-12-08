@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\EventDay;
+use App\Models\User;
 
 class Payment extends Model
 {
@@ -25,6 +27,7 @@ class Payment extends Model
         'va_number',
         'payment_url',
         'expired_at',
+        'event_day_id',
     ];
 
     protected $casts = [
@@ -40,6 +43,11 @@ class Payment extends Model
     public function event()
     {
         return $this->belongsTo(Event::class, 'event_id', 'event_id');
+    }
+
+    public function eventDay()
+    {
+        return $this->belongsTo(EventDay::class, 'event_day_id', 'id');
     }
 
     public function user()

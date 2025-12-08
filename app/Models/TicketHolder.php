@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\EventDay;
 
 class TicketHolder extends Model
 {
@@ -14,6 +15,7 @@ class TicketHolder extends Model
     protected $fillable = [
         'attendee_id',
         'event_id',
+        'event_day_id',
         'qr_code',
         'status',
     ];
@@ -27,9 +29,9 @@ class TicketHolder extends Model
     {
         return $this->belongsTo(Event::class, 'event_id', 'event_id');
     }
+
+    public function eventDay()
+    {
+        return $this->belongsTo(EventDay::class, 'event_day_id', 'id');
+    }
 }
-
-
-
-
-
