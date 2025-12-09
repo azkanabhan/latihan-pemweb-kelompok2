@@ -23,7 +23,7 @@ class ReviewRating extends Model
 
     public function attendee()
     {
-        return $this->belongsTo(Attendee::class, 'attendee_id', 'attendee_id');
+        return $this->belongsTo(Attendee::class, 'attendee_id', 'id');
     }
 
     public function event()

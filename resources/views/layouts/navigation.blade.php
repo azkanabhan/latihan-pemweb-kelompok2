@@ -23,6 +23,11 @@
                             {{ __('Events') }}
                         </x-nav-link>
                     @endif
+                    @if (Auth::user() && Auth::user()->role === 'creator')
+                        <x-nav-link :href="route('creator.qrcode.index')" :active="request()->routeIs('creator.qrcode.*')">
+                            {{ __('QR Code Scanner') }}
+                        </x-nav-link>
+                    @endif
                     @if (Auth::user() && Auth::user()->role === 'attendee')
                         <x-nav-link :href="route('tickets.index')" :active="request()->routeIs('tickets.*')">
                             {{ __('My Tickets') }}
@@ -89,6 +94,11 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.events.index')" :active="request()->routeIs('admin.events.*')">
                     {{ __('Events') }}
+                </x-responsive-nav-link>
+            @endif
+            @if (Auth::user() && Auth::user()->role === 'creator')
+                <x-responsive-nav-link :href="route('creator.qrcode.index')" :active="request()->routeIs('creator.qrcode.*')">
+                    {{ __('QR Code Scanner') }}
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user() && Auth::user()->role === 'attendee')

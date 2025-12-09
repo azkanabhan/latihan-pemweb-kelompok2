@@ -26,7 +26,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-sm opacity-90">Date & Time</p>
-                            <p class="font-semibold">{{ \Carbon\Carbon::parse($ticket->event->event_date)->format('d M Y, H:i') ?? 'TBA' }}</p>
+                            <p class="font-semibold">{{ \Carbon\Carbon::parse($ticket->event->start_date)->format('d M Y, H:i') ?? 'TBA' }}</p>
                         </div>
                     </div>
                 </div>

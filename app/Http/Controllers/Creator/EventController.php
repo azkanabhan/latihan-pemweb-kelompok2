@@ -127,6 +127,11 @@ class EventController extends Controller
 
     $ticketHolders = $event->getPaginatedTicketHolders($perPage);
 
-    return view('creator.detail', compact('event', 'ticketHolders'));
+    // Calculate statistics
+    $totalParticipants = $event->ticket_holders()->count();
+    $attendedParticipants = $event->ticket_holders()->where('status', 'used')->count();
+    $activeParticipants = $event->ticket_holders()->where('status', 'active')->count();
+
+    return view('creator.detail', compact('event', 'ticketHolders', 'totalParticipants', 'attendedParticipants', 'activeParticipants'));
   }
 }

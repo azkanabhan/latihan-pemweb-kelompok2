@@ -52,7 +52,7 @@
                         <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 space-y-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600 dark:text-gray-400">Status Pembayaran</span>
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold 
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold
                                     @if($payment->status === 'paid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                                     @elseif($payment->status === 'pending') bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                                     @else bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -76,7 +76,7 @@
                             @if($payment->payment_date)
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600 dark:text-gray-400">Tanggal Pembayaran</span>
-                                <span class="text-gray-900 dark:text-white">{{ $payment->payment_date->format('d F Y, H:i') }}</span>
+                                <span class="text-gray-900 dark:text-white">{{  \Carbon\Carbon::parse($payment->payment_date)->format('d F Y H:i') }}</span>
                             </div>
                             @endif
                             <div class="flex justify-between items-center">
@@ -111,7 +111,10 @@
                                     </svg>
                                     <div>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">Tanggal & Waktu</p>
-                                        <p class="text-gray-900 dark:text-white">{{ $event->event_date->format('d F Y, H:i') }}</p>
+                                        <p class="text-gray-900 dark:text-white">
+                                            {{ \Carbon\Carbon::parse($event->start_date)->format('d F Y H:i') }}
+                                                -
+                                            {{ \Carbon\Carbon::parse($event->end_date)->format('d F Y H:i') }}</p>
                                     </div>
                                 </div>
                             </div>

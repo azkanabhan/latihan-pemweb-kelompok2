@@ -68,11 +68,11 @@ RouteFacade::middleware(['auth', 'role:admin'])->group(function () {
 RouteFacade::middleware(['auth', 'role:creator'])->group(function () {
     // Creator: CRUD events owned by self
     Route::post('creator/events', [App\Http\Controllers\Creator\EventController::class, 'store'])->name('creator.events.store');
-    Route::get(
-        'creator/events/{id}/detail',
-        [App\Http\Controllers\Creator\EventController::class, 'showParticipants']
-    )
-        ->name('creator.events.detail');
+    Route::get('creator/events/{id}/detail',[App\Http\Controllers\Creator\EventController::class, 'showParticipants'])->name('creator.events.detail');
+
+    // Creator: QR Code Scanner/Writer
+    Route::get('creator/qrcode', [App\Http\Controllers\Creator\QRCodeController::class, 'index'])->name('creator.qrcode.index');
+    Route::post('creator/qrcode/scan', [App\Http\Controllers\Creator\QRCodeController::class, 'scan'])->name('creator.qrcode.scan');
 });
 
 // ALIAS AGAR ROUTE creator.dashboard TETAP BISA DIPAKAI DI VIEW
@@ -89,4 +89,8 @@ RouteFacade::middleware(['auth', 'role:attendee'])->group(function () {
     // Attendee: view tickets
     Route::get('/attendee/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/attendee/tickets/{ticketHolderId}/qrcode', [TicketController::class, 'showQrCode'])->name('tickets.qrcode');
+    
+    // Attendee: review and rating
+    Route::get('/attendee/tickets/{ticketHolderId}/review', [TicketController::class, 'createReview'])->name('tickets.review.create');
+    Route::post('/attendee/tickets/{ticketHolderId}/review', [TicketController::class, 'storeReview'])->name('tickets.review.store');
 });

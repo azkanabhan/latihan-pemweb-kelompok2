@@ -12,6 +12,34 @@
 
     <div class="py-12 bg-gradient-to-b from-slate-50 via-white to-white">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            {{-- Notifications --}}
+            @if(session('success'))
+                <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
+
+            @if(session('warning'))
+                <div class="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>{{ session('warning') }}</span>
+                </div>
+            @endif
+
             @if($tickets->count() > 0)
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach($tickets as $ticket)
@@ -30,7 +58,7 @@
                                 </p>
                             </div>
                             <span class="px-3 py-1 text-xs font-semibold rounded-full
-                                        {{ $ticket->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                        {{ $ticket->status === 'active' ? 'bg-green-100 text-green-800' : ($ticket->status === 'used' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
                                 {{ ucfirst($ticket->status) }}
                             </span>
                         </div>
@@ -40,7 +68,7 @@
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <span>{{ \Carbon\Carbon::parse($ticket->event->event_date)->format('d M Y, H:i') ?? 'TBA' }}</span>
+                                <span>{{ \Carbon\Carbon::parse($ticket->event->start_date)->format('d M Y, H:i') ?? 'TBA' }}</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,16 +84,36 @@
                             </div>
                         </div>
 
-                        @if($ticket->qr_code)
-                        <a href="{{ route('tickets.qrcode', $ticket->ticket_holder_id) }}"
-                            class="block w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-center py-2 px-4 rounded-lg transition">
-                            View QR Code
-                        </a>
-                        @else
-                        <div class="block w-full mt-4 bg-gray-200 text-gray-600 text-center py-2 px-4 rounded-lg">
-                            No QR Code
+                        <div class="mt-4 space-y-2">
+                            @if($ticket->qr_code)
+                            <a href="{{ route('tickets.qrcode', $ticket->ticket_holder_id) }}"
+                                class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center py-2 px-4 rounded-lg transition">
+                                View QR Code
+                            </a>
+                            @else
+                            <div class="block w-full bg-gray-200 text-gray-600 text-center py-2 px-4 rounded-lg">
+                                No QR Code
+                            </div>
+                            @endif
+
+                            {{-- Tombol Review untuk ticket yang sudah used dan belum ada review --}}
+                            @if($ticket->status === 'used' && !in_array($ticket->event_id, $existingReviews ?? []))
+                            <a href="{{ route('tickets.review.create', $ticket->ticket_holder_id) }}"
+                                class="block w-full bg-yellow-500 hover:bg-yellow-600 text-white text-center py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                                Beri Review
+                            </a>
+                            @elseif($ticket->status === 'used' && in_array($ticket->event_id, $existingReviews ?? []))
+                            <div class="block w-full bg-green-100 text-green-700 text-center py-2 px-4 rounded-lg flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Sudah Direview
+                            </div>
+                            @endif
                         </div>
-                        @endif
                     </div>
                 </div>
                 @endforeach

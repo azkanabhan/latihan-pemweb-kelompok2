@@ -244,7 +244,7 @@ class Event extends Model
      */
     public static function getEventWithFullRelations($eventId)
     {
-        return self::with(['tickets', 'ticket_holders.attendee.user', 'days'])
+        return self::with(['tickets', 'ticket_holders.attendee.user', 'days', 'reviews.attendee.user'])
             ->findOrFail($eventId);
     }
 
