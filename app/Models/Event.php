@@ -259,6 +259,26 @@ class Event extends Model
     }
 
     /**
+     * Generate Google Calendar URL for this event
+     * Used for attendee to add event to their Google Calendar
+     */
+    public function getGoogleCalendarUrl(): string
+    {
+        $startDate = $this->start_date ? $this->start_date->setTimezone('UTC')->format('Ymd\THis\Z') : '';
+        $endDate = $this->end_date ? $this->end_date->setTimezone('UTC')->format('Ymd\THis\Z') : '';
+        
+        $params = [
+            'action' => 'TEMPLATE',
+            'text' => urlencode($this->event_name ?? 'Event'),
+            'dates' => $startDate . '/' . $endDate,
+            'details' => urlencode($this->event_description ?? ''),
+            'location' => urlencode($this->event_location ?? ''),
+        ];
+        
+        return 'https://calendar.google.com/calendar/render?' . http_build_query($params);
+    }
+
+    /**
      * Get paginated ticket holders for event detail
      * Used in creator event detail page
      */

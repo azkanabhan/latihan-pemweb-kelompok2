@@ -96,6 +96,19 @@
                             </div>
                             @endif
 
+                            {{-- Add to Google Calendar Button --}}
+                            @if($ticket->event && $ticket->event->start_date && $ticket->event->end_date)
+                            <a href="{{ $ticket->event->getGoogleCalendarUrl() }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="block w-full bg-red-600 hover:bg-red-700 text-white text-center py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Add to Google Calendar
+                            </a>
+                            @endif
+
                             {{-- Tombol Review untuk ticket yang sudah used dan belum ada review --}}
                             @if($ticket->status === 'used' && !in_array($ticket->event_id, $existingReviews ?? []))
                             <a href="{{ route('tickets.review.create', $ticket->ticket_holder_id) }}"
